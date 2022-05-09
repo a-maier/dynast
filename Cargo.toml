@@ -1,0 +1,22 @@
+[package]
+name = "dynasty"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ahash = "0.7"
+anyhow = "1.0"
+clap = { version = "3.0", features = ["derive"] }
+env_logger = "0.9"
+indexmap = { version = "1.8", features = ["serde"] }
+lazy_static = "1.4"
+log = "0.4"
+memmap = "0.7.0"
+nauty-pet = "0.5"
+nom = "7"
+num-rational = { version = "0.4", features = ["serde"] }
+petgraph = "0.6"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.8"
+thiserror = "1.0"
+typed-builder = "0.10"
