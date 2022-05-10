@@ -83,7 +83,7 @@ impl<'a> std::convert::From<nom::Err<nom::error::Error<&'a str>>> for ImportErro
     }
 }
 
-impl TryFrom<Diagram> for CanonGraph<NodeWeight, EdgeWeight, Undirected> {
+impl TryFrom<Diagram> for CanonGraph<Momentum, EdgeWeight, Undirected> {
     type Error = ImportError;
 
     fn try_from(dia: Diagram) -> Result<Self, Self::Error> {
@@ -103,8 +103,8 @@ impl TryFrom<Diagram> for CanonGraph<NodeWeight, EdgeWeight, Undirected> {
         }
         nvertices += 1;
         let mut res = UnGraph::with_capacity(nvertices as usize, nprops);
-        for n in 0..nvertices {
-            res.add_node(NodeWeight::new(n));
+        for _ in 0..nvertices {
+            res.add_node(Momentum::zero());
         }
 
         for e in dia.elem {
@@ -118,8 +118,8 @@ impl TryFrom<Diagram> for CanonGraph<NodeWeight, EdgeWeight, Undirected> {
                 },
                 Vx(id, p) => {
                     let id = res.from_index(id as usize);
-                    let p = p.try_into()?;
-                    res.node_weight_mut(id).unwrap().p = p;
+                    let p = Momentum::try_from(p)?;
+                    *res.node_weight_mut(id).unwrap() += p;
                 },
             }
         }
@@ -129,22 +129,8 @@ impl TryFrom<Diagram> for CanonGraph<NodeWeight, EdgeWeight, Undirected> {
 
 #[derive(Clone, Debug, Default, Derivative)]
 #[derivative(Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub(crate) struct NodeWeight {
-    pub(crate) p: Momentum,
-    #[derivative(PartialEq="ignore", PartialOrd="ignore", Ord="ignore")]
-    pub(crate) orig_id: u32,
-}
-
-impl NodeWeight {
-    fn new(id: u32) -> Self {
-        Self { p: Default::default(), orig_id: id }
-    }
-}
-
-#[derive(Clone, Debug, Default, Derivative)]
-#[derivative(Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub(crate) struct EdgeWeight {
-    #[derivative(PartialEq="ignore", PartialOrd="ignore", Ord="ignore")]
+    #[derivative(PartialEq="ignore", PartialOrd="ignore", Ord="ignore", Hash="ignore")]
     pub(crate) p: Momentum,
     pub(crate) m: String,
 }
