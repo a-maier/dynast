@@ -1,34 +1,26 @@
-mod conv;
-mod diagram;
-mod form;
 mod momentum;
 mod symbol;
+mod yaml_dias;
 
 use std::collections::hash_map::Entry;
 use std::path::PathBuf;
-use std::io::{BufWriter, Write};
-use std::fs::{File, read_to_string};
+use std::io::{BufReader, BufWriter, Write};
+use std::fs::File;
+use std::convert::TryFrom;
 
 use ahash::AHashMap;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use clap::Parser;
 use indexmap::IndexMap;
 use log::{info, debug, trace};
-use petgraph::{
-    graph::UnGraph,
-};
+use nauty_pet::prelude::*;
 
-use crate::conv::{GraphConv, Mass};
-use crate::form::FormDiaParser;
+use crate::yaml_dias::{NumOrString, Diagram};
 
 /// Map diagrams onto topologies
 #[derive(Parser, Debug)]
 #[clap(version, about, long_about = None)]
 struct Args {
-    // Masses
-    #[clap(short, long, parse(try_from_str = parse_map))]
-    masses: AHashMap<String, Mass>,
-
     /// Output file
     #[clap(short, long)]
     outfile: Option<PathBuf>,
@@ -38,50 +30,39 @@ struct Args {
     infiles: Vec<PathBuf>,
 }
 
-fn parse_map(input: &str) -> Result<AHashMap<String, i32>, serde_yaml::Error> {
-    serde_yaml::from_reader(input.as_bytes())
-}
-
 fn write_mappings(
     args: Args,
     mut out: impl Write
 ) -> Result<()> {
     let mut seen = AHashMap::new();
-    let conv = GraphConv::new(args.masses);
 
     for filename in &args.infiles {
         info!("Reading diagrams from {filename:?}");
-        let input = read_to_string(filename).with_context(
+        let file = File::open(filename).with_context(
             || format!("Failed to read {filename:?}")
         )?;
-        let dias = FormDiaParser::new(input.as_str());
-        for dia in dias {
-            let mut dia = dia.map_err(|e| anyhow!("{}", e))?;
-            debug!("Read {dia:#?}");
-            let graph = conv.to_petgraph(&dia)?;
+        let reader = BufReader::new(file);
+        let dias: IndexMap<NumOrString, Diagram> = serde_yaml::from_reader(
+            reader
+        ).with_context(
+            || format!("Reading from {filename:?}")
+        )?;
+        for (name, dia) in dias {
+            debug!("Read {name}: {dia:#?}");
+            let graph = CanonGraph::try_from(
+                dia
+            ).with_context(
+                || format!("Parsing diagram {name}")
+            )?;
             trace!("Canonical graph {graph:#?}");
-
-            // relabel vertices
-            let mut relabel = vec![0; graph.node_count()];
-            for (new_id, n) in graph.node_weights().enumerate() {
-                relabel[n.orig_id as usize] = new_id as u32;
-            }
-            for prop in &mut dia.propagators {
-                prop.from = relabel[prop.from as usize];
-                prop.to = relabel[prop.to as usize];
-            }
-            for vx in &mut dia.vertices {
-                vx.id = relabel[vx.id as usize];
-            }
-            trace!("Relabelled: {dia:#?}");
 
             match seen.entry(graph) {
                 Entry::Vacant(v) => {
-                    writeln!(out, "{0}: {0}", dia.name)?;
-                    v.insert(dia);
+                    writeln!(out, "{0}: {0}", name)?;
+                    v.insert(name);
                 },
                 Entry::Occupied(o) => {
-                    writeln!(out, "{}: {}", dia.name, o.get().name)?
+                    writeln!(out, "{}: {}", name, o.get())?
                 }
             }
         }
