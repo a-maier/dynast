@@ -7,6 +7,7 @@ edition = "2021"
 ahash = { version = "0.7", features = ["serde"] }
 anyhow = "1.0"
 clap = { version = "3.0", features = ["derive"] }
+derivative = "2.2.0"
 env_logger = "0.9"
 indexmap = { version = "1.8", features = ["serde"] }
 lazy_static = "1.4"

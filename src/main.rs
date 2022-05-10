@@ -56,8 +56,25 @@ fn write_mappings(
         )?;
         let dias = FormDiaParser::new(input.as_str());
         for dia in dias {
-            let dia = dia.map_err(|e| anyhow!("{}", e))?;
+            let mut dia = dia.map_err(|e| anyhow!("{}", e))?;
+            debug!("Read {dia:#?}");
             let graph = conv.to_petgraph(&dia)?;
+            trace!("Canonical graph {graph:#?}");
+
+            // relabel vertices
+            let mut relabel = vec![0; graph.node_count()];
+            for (new_id, n) in graph.node_weights().enumerate() {
+                relabel[n.orig_id as usize] = new_id as u32;
+            }
+            for prop in &mut dia.propagators {
+                prop.from = relabel[prop.from as usize];
+                prop.to = relabel[prop.to as usize];
+            }
+            for vx in &mut dia.vertices {
+                vx.id = relabel[vx.id as usize];
+            }
+            trace!("Relabelled: {dia:#?}");
+
             match seen.entry(graph) {
                 Entry::Vacant(v) => {
                     writeln!(out, "{0}: {0}", dia.name)?;

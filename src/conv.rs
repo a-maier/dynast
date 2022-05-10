@@ -1,4 +1,7 @@
+use std::default::Default;
+
 use ahash::AHashMap;
+use derivative::Derivative;
 use nauty_pet::prelude::*;
 use petgraph::{
     graph::UnGraph,
@@ -16,6 +19,20 @@ pub(crate) struct GraphConv {
     masses: AHashMap<String, Mass>,
 }
 
+#[derive(Clone, Debug, Default, Derivative)]
+#[derivative(Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub(crate) struct NodeWeight {
+    pub(crate) p: Momentum,
+    #[derivative(PartialEq="ignore", PartialOrd="ignore", Ord="ignore")]
+    pub(crate) orig_id: u32,
+}
+
+impl NodeWeight {
+    fn new(id: u32) -> Self {
+        Self { p: Default::default(), orig_id: id }
+    }
+}
+
 #[derive(Debug, Error)]
 pub(crate) enum ConversionError {
     #[error("Field {0} has unknown mass")]
@@ -30,7 +47,7 @@ impl GraphConv {
     pub(crate) fn to_petgraph(
         &self,
         dia: &Diagram
-    ) -> Result<CanonGraph<Momentum, Mass, Undirected>, ConversionError> {
+    ) -> Result<CanonGraph<NodeWeight, Mass, Undirected>, ConversionError> {
         use ConversionError::*;
         use petgraph::visit::NodeIndexable;
 
@@ -42,8 +59,8 @@ impl GraphConv {
             .map(|vx| vx.id)
             .max()
             .unwrap_or(0);
-        for _ in 0..=highest_vx_id {
-            res.add_node(Momentum::zero());
+        for id in 0..=highest_vx_id {
+            res.add_node(NodeWeight::new(id));
         }
         // TODO: filter out duplicate propagators (same momentum)
         for prop in &dia.propagators {
@@ -64,7 +81,9 @@ impl GraphConv {
                     |p_in, f| p_in + &f.momentum
                 );
             let v = res.from_index(vx.id as usize);
-            *res.node_weight_mut(v).unwrap() = p_in;
+            let mut wt = res.node_weight_mut(v).unwrap();
+            debug_assert_eq!(wt.orig_id, vx.id);
+            wt.p = p_in;
         }
         Ok(res.into())
     }
