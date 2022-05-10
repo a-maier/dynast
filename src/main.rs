@@ -1,27 +1,34 @@
-use std::collections::hash_map::Entry;
-use std::path::PathBuf;
-use std::io::BufReader;
-use std::fs::File;
-
-use ahash::AHashMap;
-use anyhow::{Context, Result};
-use clap::Parser;
-use indexmap::IndexMap;
-use log::{info, debug, trace};
-use nauty_pet::prelude::*;
-use petgraph::{
-    graph::UnGraph,
-};
-
+mod conv;
 mod diagram;
 mod form;
 mod momentum;
 mod symbol;
 
+use std::collections::hash_map::Entry;
+use std::path::PathBuf;
+use std::io::{BufWriter, Write};
+use std::fs::{File, read_to_string};
+
+use ahash::AHashMap;
+use anyhow::{anyhow, Context, Result};
+use clap::Parser;
+use indexmap::IndexMap;
+use log::{info, debug, trace};
+use petgraph::{
+    graph::UnGraph,
+};
+
+use crate::conv::{GraphConv, Mass};
+use crate::form::FormDiaParser;
+
 /// Map diagrams onto topologies
 #[derive(Parser, Debug)]
 #[clap(version, about, long_about = None)]
 struct Args {
+    // Masses
+    #[clap(short, long, parse(try_from_str = parse_map))]
+    masses: AHashMap<String, Mass>,
+
     /// Output file
     #[clap(short, long)]
     outfile: Option<PathBuf>,
@@ -31,47 +38,48 @@ struct Args {
     infiles: Vec<PathBuf>,
 }
 
-type Edge = (u32, u32, u32);
-type Mass = u32;
-type VxColour = ();
+fn parse_map(input: &str) -> Result<AHashMap<String, i32>, serde_yaml::Error> {
+    serde_yaml::from_reader(input.as_bytes())
+}
 
-// #[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
-// struct Mapper {
-//     seen: AHashMap<CanonGraph<VxColour,
-// }
+fn write_mappings(
+    args: Args,
+    mut out: impl Write
+) -> Result<()> {
+    let mut seen = AHashMap::new();
+    let conv = GraphConv::new(args.masses);
+
+    for filename in &args.infiles {
+        info!("Reading diagrams from {filename:?}");
+        let input = read_to_string(filename).with_context(
+            || format!("Failed to read {filename:?}")
+        )?;
+        let dias = FormDiaParser::new(input.as_str());
+        for dia in dias {
+            let dia = dia.map_err(|e| anyhow!("{}", e))?;
+            let graph = conv.to_petgraph(&dia)?;
+            match seen.entry(graph) {
+                Entry::Vacant(v) => {
+                    writeln!(out, "{0}: {0}", dia.name)?;
+                    v.insert(dia);
+                },
+                Entry::Occupied(o) => {
+                    writeln!(out, "{}: {}", dia.name, o.get().name)?
+                }
+            }
+        }
+    }
+    Ok(())
+}
 
 fn main() -> Result<()> {
     let args = Args::parse();
     env_logger::init();
 
-    let mut seen = AHashMap::new();
-
-    for filename in &args.infiles {
-        info!("Reading diagrams from {filename:?}");
-        let file = File::open(filename).with_context(
-            || format!("Opening {filename:?}")
-        )?;
-        let file = BufReader::new(file);
-        let dias: IndexMap<String, Vec<Edge>>  = serde_yaml::from_reader(
-            file
-        ).with_context(
-            || format!("Reading {filename:?}")
-        )?;
-        for (name, props) in dias {
-            debug!("diagram {name}");
-            let dia = UnGraph::<(), _>::from_edges(props);
-            trace!("dia: {dia:#?}");
-            let canon = CanonGraph::from(dia);
-            trace!("canon: {canon:#?}");
-            match seen.entry(canon) {
-                Entry::Vacant(v) => {
-                    println!("{name}: {name}");
-                    v.insert(name);
-                },
-                Entry::Occupied(v) => println!("{name}: {}", v.get())
-            };
-        }
+    if let Some(filename) = &args.outfile {
+        let out = BufWriter::new(File::create(filename)?);
+        write_mappings(args, out)
+    } else {
+        write_mappings(args, std::io::stdout())
     }
-
-    Ok(())
 }

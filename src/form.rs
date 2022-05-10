@@ -1,4 +1,3 @@
-use std::default::Default;
 use std::iter::once;
 
 use nom::{
@@ -58,7 +57,7 @@ impl<'a> std::convert::From<nom::Err<nom::error::Error<&'a str>>> for ImportErro
 
 #[derive(Debug, Error)]
 pub(crate) enum ImportError<'a> {
-    #[error("parse error: ")]
+    #[error("{0}")]
     ParseError(nom::Err<nom::error::Error<&'a str>>)
 }
 

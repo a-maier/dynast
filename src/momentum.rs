@@ -75,6 +75,7 @@ impl Display for Term {
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[serde(transparent)]
 pub struct Momentum {
     #[serde(deserialize_with = "deserialize_terms")]
     terms: Vec<Term>,

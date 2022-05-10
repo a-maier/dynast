@@ -38,6 +38,7 @@ lazy_static! {
 }
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
+#[serde(transparent)]
 pub struct Symbol {
     #[serde(serialize_with = "serialize_sym", deserialize_with = "deserialize_sym")]
     idx: usize
