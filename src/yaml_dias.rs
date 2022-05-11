@@ -20,16 +20,10 @@ use crate::momentum::{Term, Momentum};
 use crate::symbol::Symbol;
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
-#[serde(transparent)]
 pub(crate) struct Diagram {
-    pub(crate) elem: Vec<PropOrVx>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
-#[serde(untagged)]
-pub(crate) enum PropOrVx {
-    Prop(u32, u32, NumOrString, NumOrString),
-    Vx(u32, NumOrString),
+    #[serde(alias = "external momenta", default)]
+    pub(crate) external_momenta: Vec<(u32, NumOrString)>,
+    pub(crate) propagators: Vec<(u32, u32, NumOrString, NumOrString)>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
@@ -88,40 +82,28 @@ impl TryFrom<Diagram> for CanonGraph<Momentum, EdgeWeight, Undirected> {
 
     fn try_from(dia: Diagram) -> Result<Self, Self::Error> {
         use petgraph::visit::NodeIndexable;
-        use PropOrVx::*;
 
-        let mut nvertices = 0;
-        let mut nprops = 0;
-        for elem in &dia.elem {
-            if let Prop(from, to, _, _) = elem {
-                nprops += 1;
-                let max_v = max(*from, *to);
-                if max_v > nvertices {
-                    nvertices = max_v
-                }
-            }
-        }
-        nvertices += 1;
+        let nprops = dia.propagators.len();
+        let nvertices = dia.propagators.iter().map(
+            |(from, to, _, _)| max(*from, *to)
+        ).max().unwrap() + 1;
         let mut res = UnGraph::with_capacity(nvertices as usize, nprops);
         for _ in 0..nvertices {
             res.add_node(Momentum::zero());
         }
 
-        for e in dia.elem {
-            match e {
-                Prop(from, to, p, m) => {
-                    let from = res.from_index(from as usize);
-                    let to = res.from_index(to as usize);
-                    let p = p.try_into()?;
-                    let m = m.into();
-                    res.add_edge(from, to, EdgeWeight{p, m});
-                },
-                Vx(id, p) => {
-                    let id = res.from_index(id as usize);
-                    let p = Momentum::try_from(p)?;
-                    *res.node_weight_mut(id).unwrap() += p;
-                },
-            }
+        for (from, to, p, m) in dia.propagators {
+            let from = res.from_index(from as usize);
+            let to = res.from_index(to as usize);
+            let p = p.try_into()?;
+            let m = m.into();
+            res.add_edge(from, to, EdgeWeight{p, m});
+        }
+
+        for (id, p) in dia.external_momenta {
+            let id = res.from_index(id as usize);
+            let p = Momentum::try_from(p)?;
+            *res.node_weight_mut(id).unwrap() += p;
         }
         Ok(res.into())
     }
