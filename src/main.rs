@@ -10,10 +10,9 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 use std::path::PathBuf;
 
-use ahash::AHashMap;
+use ahash::RandomState;
 use anyhow::{Context, Result};
 use clap::Parser;
-use indexmap::IndexMap;
 use log::{debug, info, trace};
 use nauty_pet::prelude::*;
 use petgraph::Graph;
@@ -22,6 +21,8 @@ use crate::canon::into_canon;
 use crate::momentum_mapping::Mapping;
 use crate::yaml_dias::{Diagram, NumOrString};
 use crate::yaml_doc_iter::YamlDocIter;
+
+type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 
 /// Map diagrams onto topologies
 #[derive(Parser, Debug)]
@@ -37,7 +38,7 @@ struct Args {
 }
 
 fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
-    let mut seen: AHashMap<CanonGraph<_, _, _>, _> = AHashMap::new();
+    let mut seen: IndexMap<CanonGraph<_, _, _>, _> = IndexMap::default();
 
     for filename in &args.infiles {
         info!("Reading diagrams from {filename:?}");

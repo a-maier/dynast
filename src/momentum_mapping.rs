@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::fmt::{self, Display};
 
-use ahash::{AHashMap, AHashSet};
+use ahash::RandomState;
 use itertools::{izip, join, Itertools};
 use log::{debug, trace};
 use nalgebra::{
@@ -15,9 +15,12 @@ use crate::momentum::{Momentum, Term};
 use crate::symbol::Symbol;
 use crate::yaml_dias::EdgeWeight;
 
+type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
+type IndexSet<T> = indexmap::IndexSet<T, RandomState>;
+
 #[derive(Clone, Default, Debug, Eq, PartialEq)]
 pub(crate) struct Mapping {
-    map: AHashMap<Symbol, Momentum>,
+    map: IndexMap<Symbol, Momentum>,
 }
 
 impl Display for Mapping {
@@ -32,7 +35,7 @@ impl Display for Mapping {
 #[derive(Debug, Error)]
 pub(crate) enum MappingError {
     #[error("Sets of loop momenta differ: {{{}}} != {{{}}}", join(.0, ", "), join(.1, ", "))]
-    MomentumMismatch(AHashSet<Symbol>, AHashSet<Symbol>),
+    MomentumMismatch(IndexSet<Symbol>, IndexSet<Symbol>),
 }
 
 impl Mapping {
@@ -65,12 +68,12 @@ impl Mapping {
         }
         let mut loop_momenta = Vec::from_iter(loop_momenta);
         loop_momenta.sort_unstable();
-        let loop_momentum_pos = AHashMap::from_iter(
+        let loop_momentum_pos = IndexMap::from_iter(
             loop_momenta.iter().enumerate().map(|(n, p)| (*p, n)),
         );
         let mut ext_momenta = Vec::from_iter(ext_momenta);
         ext_momenta.sort_unstable();
-        let ext_momentum_pos = AHashMap::from_iter(
+        let ext_momentum_pos = IndexMap::from_iter(
             ext_momenta.iter().enumerate().map(|(n, p)| (*p, n)),
         );
 
@@ -132,7 +135,7 @@ impl Mapping {
         debug_assert_eq!(l.nrows(), l.ncols());
         debug_assert_eq!(l.nrows(), q.nrows());
         debug_assert_eq!(q.ncols(), ext_momenta.len());
-        let mut map = AHashMap::new();
+        let mut map = IndexMap::default();
         let rows = izip!(loop_momenta, l.row_iter(), q.row_iter());
         for (lhs, lrow, qrow) in rows {
             let mut rhs = Momentum::zero();
@@ -180,8 +183,8 @@ where
 
 fn to_matrices(
     shifts: &[Shift],
-    lpos: &AHashMap<Symbol, usize>,
-    qpos: &AHashMap<Symbol, usize>,
+    lpos: &IndexMap<Symbol, usize>,
+    qpos: &IndexMap<Symbol, usize>,
 ) -> (DMatrix<f64>, DMatrix<f64>, DMatrix<f64>, DMatrix<f64>) {
     let nshifts = shifts.len();
     let nloops = lpos.len();
@@ -199,8 +202,8 @@ fn to_matrices(
 }
 
 struct CoeffExtract<'a> {
-    lpos: &'a AHashMap<Symbol, usize>,
-    qpos: &'a AHashMap<Symbol, usize>,
+    lpos: &'a IndexMap<Symbol, usize>,
+    qpos: &'a IndexMap<Symbol, usize>,
 }
 
 impl<'a> CoeffExtract<'a> {
@@ -316,8 +319,8 @@ impl<'a> Ord for Shift<'a> {
     }
 }
 
-fn extract_external_momenta<E>(g: &UnGraph<Momentum, E>) -> AHashSet<Symbol> {
-    let mut res = AHashSet::new();
+fn extract_external_momenta<E>(g: &UnGraph<Momentum, E>) -> IndexSet<Symbol> {
+    let mut res = IndexSet::default();
     for p in g.node_weights() {
         for term in p.terms() {
             res.insert(term.symbol());
@@ -328,9 +331,9 @@ fn extract_external_momenta<E>(g: &UnGraph<Momentum, E>) -> AHashSet<Symbol> {
 
 fn extract_loop_momenta<N>(
     g: &UnGraph<N, EdgeWeight>,
-    external_momenta: &AHashSet<Symbol>,
-) -> AHashSet<Symbol> {
-    let mut res = AHashSet::new();
+    external_momenta: &IndexSet<Symbol>,
+) -> IndexSet<Symbol> {
+    let mut res = IndexSet::default();
     for w in g.edge_weights() {
         for term in w.p.terms() {
             if !external_momenta.contains(&term.symbol()) {
