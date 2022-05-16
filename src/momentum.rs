@@ -5,6 +5,7 @@ use std::ops::{Add, AddAssign, Sub, SubAssign, Neg, Mul, MulAssign};
 
 use crate::symbol::Symbol;
 
+use num_traits::Zero;
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
@@ -18,16 +19,18 @@ impl Term {
         Term{ symbol, coeff }
     }
 
-    pub fn new_from_sym(symbol: Symbol) -> Term {
-        Term{ symbol, coeff: 1 }
-    }
-
     pub fn symbol(&self) -> Symbol {
         self.symbol
     }
 
     pub fn coeff(&self) -> i32 {
         self.coeff
+    }
+}
+
+impl From<Symbol> for Term {
+    fn from(symbol: Symbol) -> Self {
+        Self { symbol, coeff: 1}
     }
 }
 
@@ -90,14 +93,6 @@ fn deserialize_terms<'de, D: Deserializer<'de>>(
 }
 
 impl Momentum {
-    pub fn zero() -> Self {
-        Momentum { terms: vec![] }
-    }
-
-    pub fn is_zero(&self) -> bool {
-        self.terms.is_empty()
-    }
-
     pub fn terms(&self) -> &[Term] {
         &self.terms
     }
@@ -147,6 +142,12 @@ impl From<Term> for Momentum {
         } else {
             Momentum{ terms: vec![t] }
         }
+    }
+}
+
+impl From<Symbol> for Momentum {
+    fn from(s: Symbol) -> Self {
+        Momentum{ terms: vec![s.into()] }
     }
 }
 
@@ -412,6 +413,16 @@ impl Mul<&Momentum> for i32 {
     }
 }
 
+impl Zero for Momentum {
+    fn zero() -> Self {
+        Momentum { terms: vec![] }
+    }
+
+    fn is_zero(&self) -> bool {
+        self.terms.is_empty()
+    }
+}
+
 impl Mul<i32> for Symbol {
     type Output = Term;
 
@@ -436,8 +447,8 @@ mod tests {
     #[test]
     fn momentum() {
         symbols!(x, y);
-        let x = Momentum::from(Term::new_from_sym(x));
-        let y = Momentum::from(Term::new_from_sym(y));
+        let x = Momentum::from(x);
+        let y = Momentum::from(y);
         assert_eq!(Momentum::zero(), &x - &x);
         assert_eq!(2*&x, &x + &x);
         assert_eq!(Momentum::zero(), &x + &y - &x - &y);

@@ -1,22 +1,34 @@
+mod canon;
 mod momentum;
+mod momentum_mapping;
 mod symbol;
 mod yaml_dias;
 mod yaml_doc_iter;
 
 use std::collections::hash_map::Entry;
+use std::convert::identity;
 use std::path::PathBuf;
 use std::io::{BufReader, BufWriter, Write};
 use std::fs::File;
 use std::convert::TryFrom;
 
-use ahash::AHashMap;
+use ahash::{AHashMap, AHashSet};
 use anyhow::{Context, Result};
 use clap::Parser;
 use indexmap::IndexMap;
 use log::{info, debug, trace};
 use nauty_pet::prelude::*;
+use petgraph::{
+    graph::{IndexType, UnGraph},
+    EdgeType,
+    Graph,
+    visit::EdgeRef,
+};
 
-use crate::yaml_dias::{NumOrString, Diagram};
+use crate::canon::into_canon;
+use crate::momentum::Momentum;
+use crate::momentum_mapping::Mapping;
+use crate::yaml_dias::{NumOrString, Diagram, EdgeWeight};
 use crate::yaml_doc_iter::YamlDocIter;
 
 /// Map diagrams onto topologies
@@ -36,7 +48,7 @@ fn write_mappings(
     args: Args,
     mut out: impl Write
 ) -> Result<()> {
-    let mut seen = AHashMap::new();
+    let mut seen: AHashMap<CanonGraph<_, _, _>, _> = AHashMap::new();
 
     for filename in &args.infiles {
         info!("Reading diagrams from {filename:?}");
@@ -63,21 +75,21 @@ fn write_mappings(
             };
             for (name, dia) in dias {
                 debug!("Read {name}: {dia:#?}");
-                let graph = CanonGraph::try_from(
+                let graph = Graph::try_from(
                     dia
                 ).with_context(
                     || format!("Parsing diagram {name}")
                 )?;
-                trace!("Canonical graph {graph:#?}");
+                trace!("Graph {graph:#?}");
 
-                match seen.entry(graph) {
-                    Entry::Vacant(v) => {
-                        writeln!(out, "{0}: {0}", name)?;
-                        v.insert(name);
-                    },
-                    Entry::Occupied(o) => {
-                        writeln!(out, "{}: {}", name, o.get())?
-                    }
+                let canon = into_canon(graph);
+
+                if let Some((known, topname)) = seen.get_key_value(&canon) {
+                    let mapping = Mapping::new(canon.get(), known.get())?;
+                    writeln!(out, "{name}: [{topname}, {mapping}]")?;
+                } else {
+                    writeln!(out, "{name}: [{name}, {}]", Mapping::identity(canon.get()))?;
+                    seen.insert(canon, name);
                 }
             }
         }

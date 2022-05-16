@@ -4,7 +4,6 @@ use std::iter::once;
 use std::fmt::Display;
 
 use derivative::Derivative;
-use nauty_pet::prelude::*;
 use nom::{
     IResult,
     character::complete::{alpha1, alphanumeric0, char, digit1, multispace0, one_of},
@@ -12,6 +11,7 @@ use nom::{
     multi::many0,
     sequence::{preceded, separated_pair, pair, terminated, tuple},
 };
+use num_traits::Zero;
 use petgraph::{graph::UnGraph, Undirected};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -77,7 +77,7 @@ impl<'a> std::convert::From<nom::Err<nom::error::Error<&'a str>>> for ImportErro
     }
 }
 
-impl TryFrom<Diagram> for CanonGraph<Momentum, EdgeWeight, Undirected> {
+impl TryFrom<Diagram> for UnGraph<Momentum, EdgeWeight> {
     type Error = ImportError;
 
     fn try_from(dia: Diagram) -> Result<Self, Self::Error> {
@@ -88,7 +88,7 @@ impl TryFrom<Diagram> for CanonGraph<Momentum, EdgeWeight, Undirected> {
             |(from, to, _, _)| max(*from, *to)
         ).max().unwrap() + 1;
         let mut res = UnGraph::with_capacity(nvertices as usize, nprops);
-        for _ in 0..nvertices {
+        for id in 0..nvertices {
             res.add_node(Momentum::zero());
         }
 
@@ -105,7 +105,7 @@ impl TryFrom<Diagram> for CanonGraph<Momentum, EdgeWeight, Undirected> {
             let p = Momentum::try_from(p)?;
             *res.node_weight_mut(id).unwrap() += p;
         }
-        Ok(res.into())
+        Ok(res)
     }
 }
 
@@ -185,7 +185,7 @@ fn term(input: &str) -> IResult<&str, Term> {
     let term = if let Some(coeff) = coeff {
         Term::new(coeff as i32, sym)
     } else {
-        Term::new_from_sym(sym)
+        sym.into()
     };
     Ok((rest, term))
 }
@@ -218,7 +218,7 @@ mod tests {
     fn parse_term() {
         symbols!(p);
         let (_rest, t) = term("p").unwrap();
-        assert_eq!(t, Term::new_from_sym(p));
+        assert_eq!(t, Term::from(p));
 
         let (_rest, t) = term("2*p").unwrap();
         assert_eq!(t, Term::new(2, p));

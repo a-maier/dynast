@@ -10,12 +10,15 @@ clap = { version = "3.0", features = ["derive"] }
 derivative = "2.2.0"
 env_logger = "0.9"
 indexmap = { version = "1.8", features = ["serde"] }
+itertools = "0.10.3"
 lazy_static = "1.4"
 log = "0.4"
 memmap = "0.7.0"
-nauty-pet = "0.5"
+nalgebra = "0.31.0"
+nauty-pet = "0.6"
 nom = "7"
 num-rational = { version = "0.4", features = ["serde"] }
+num-traits = "0.2.15"
 petgraph = "0.6"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
