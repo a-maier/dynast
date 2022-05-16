@@ -5,22 +5,22 @@ mod symbol;
 mod yaml_dias;
 mod yaml_doc_iter;
 
-use std::path::PathBuf;
-use std::io::{BufReader, BufWriter, Write};
-use std::fs::File;
 use std::convert::TryFrom;
+use std::fs::File;
+use std::io::{BufReader, BufWriter, Write};
+use std::path::PathBuf;
 
 use ahash::AHashMap;
 use anyhow::{Context, Result};
 use clap::Parser;
 use indexmap::IndexMap;
-use log::{info, debug, trace};
+use log::{debug, info, trace};
 use nauty_pet::prelude::*;
 use petgraph::Graph;
 
 use crate::canon::into_canon;
 use crate::momentum_mapping::Mapping;
-use crate::yaml_dias::{NumOrString, Diagram};
+use crate::yaml_dias::{Diagram, NumOrString};
 use crate::yaml_doc_iter::YamlDocIter;
 
 /// Map diagrams onto topologies
@@ -36,42 +36,39 @@ struct Args {
     infiles: Vec<PathBuf>,
 }
 
-fn write_mappings(
-    args: Args,
-    mut out: impl Write
-) -> Result<()> {
+fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
     let mut seen: AHashMap<CanonGraph<_, _, _>, _> = AHashMap::new();
 
     for filename in &args.infiles {
         info!("Reading diagrams from {filename:?}");
-        let file = File::open(filename).with_context(
-            || format!("Failed to read {filename:?}")
-        )?;
+        let file = File::open(filename)
+            .with_context(|| format!("Failed to read {filename:?}"))?;
         let reader = BufReader::new(file);
         for document in YamlDocIter::new(reader) {
             let document = document?;
-            trace!("yaml document:\n{}", std::str::from_utf8(&document).unwrap());
-            let dias: Result<IndexMap<NumOrString, Diagram>, _> = serde_yaml::from_slice(&document);
+            trace!(
+                "yaml document:\n{}",
+                std::str::from_utf8(&document).unwrap()
+            );
+            let dias: Result<IndexMap<NumOrString, Diagram>, _> =
+                serde_yaml::from_slice(&document);
             let dias = match dias {
                 Ok(dias) => dias,
                 Err(err) => {
                     // TODO: check for error type, but that is not accessible?!
                     if format!("{err:?}") == "EndOfStream" {
-                        continue
+                        continue;
                     } else {
-                        return Err(err).with_context(
-                            || format!("Reading from {filename:?}")
-                        )
+                        return Err(err).with_context(|| {
+                            format!("Reading from {filename:?}")
+                        });
                     }
                 }
             };
             for (name, dia) in dias {
                 debug!("Read {name}: {dia:#?}");
-                let graph = Graph::try_from(
-                    dia
-                ).with_context(
-                    || format!("Parsing diagram {name}")
-                )?;
+                let graph = Graph::try_from(dia)
+                    .with_context(|| format!("Parsing diagram {name}"))?;
                 trace!("Graph {graph:#?}");
 
                 let canon = into_canon(graph);
@@ -80,7 +77,11 @@ fn write_mappings(
                     let mapping = Mapping::new(canon.get(), known.get())?;
                     writeln!(out, "{name}: [{topname}, {mapping}]")?;
                 } else {
-                    writeln!(out, "{name}: [{name}, {}]", Mapping::identity(canon.get()))?;
+                    writeln!(
+                        out,
+                        "{name}: [{name}, {}]",
+                        Mapping::identity(canon.get())
+                    )?;
                     seen.insert(canon, name);
                 }
             }

@@ -22,7 +22,7 @@ impl SymbolRegister {
 
     fn idx(&mut self, name: &str) -> usize {
         if let Some(idx) = self.try_idx(name) {
-            return idx
+            return idx;
         }
         let new_idx = self.names.len();
         self.indices.insert(String::from(name), new_idx);
@@ -32,22 +32,36 @@ impl SymbolRegister {
 }
 
 lazy_static! {
-    static ref SYMBOL_REGISTER: RwLock<SymbolRegister> = RwLock::new(
-        SymbolRegister::default()
-    );
+    static ref SYMBOL_REGISTER: RwLock<SymbolRegister> =
+        RwLock::new(SymbolRegister::default());
 }
 
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    Default,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Deserialize,
+    Serialize,
+)]
 #[serde(transparent)]
 pub struct Symbol {
-    #[serde(serialize_with = "serialize_sym", deserialize_with = "deserialize_sym")]
-    idx: usize
+    #[serde(
+        serialize_with = "serialize_sym",
+        deserialize_with = "deserialize_sym"
+    )]
+    idx: usize,
 }
 
 impl Symbol {
     pub(crate) fn new_unchecked(name: &str) -> Self {
         if let Some(idx) = SYMBOL_REGISTER.read().unwrap().try_idx(name) {
-            return Self { idx }
+            return Self { idx };
         }
         let idx = SYMBOL_REGISTER.write().unwrap().idx(name);
         Self { idx }
@@ -64,17 +78,13 @@ impl Display for Symbol {
     }
 }
 
-fn serialize_sym<S: Serializer>(
-    sym: &usize, s: S
-) -> Result<S::Ok, S::Error> {
-    let sym = Symbol{ idx: *sym };
+fn serialize_sym<S: Serializer>(sym: &usize, s: S) -> Result<S::Ok, S::Error> {
+    let sym = Symbol { idx: *sym };
     let name = sym.name();
     String::serialize(&name, s)
 }
 
-fn deserialize_sym<'de, D: Deserializer<'de>>(
-    d: D
-) -> Result<usize, D::Error> {
+fn deserialize_sym<'de, D: Deserializer<'de>>(d: D) -> Result<usize, D::Error> {
     let name = String::deserialize(d)?;
     let s = Symbol::new_unchecked(&name);
     Ok(s.idx)

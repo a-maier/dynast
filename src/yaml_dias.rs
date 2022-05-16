@@ -1,43 +1,49 @@
 use std::cmp::max;
 use std::convert::TryFrom;
-use std::iter::once;
 use std::fmt::Display;
+use std::iter::once;
 
 use derivative::Derivative;
 use nom::{
-    IResult,
-    character::complete::{alpha1, alphanumeric0, char, digit1, multispace0, one_of},
+    character::complete::{
+        alpha1, alphanumeric0, char, digit1, multispace0, one_of,
+    },
     combinator::{opt, recognize},
     multi::many0,
-    sequence::{preceded, separated_pair, pair, terminated, tuple},
+    sequence::{pair, preceded, separated_pair, terminated, tuple},
+    IResult,
 };
 use num_traits::Zero;
 use petgraph::graph::UnGraph;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::momentum::{Term, Momentum};
+use crate::momentum::{Momentum, Term};
 use crate::symbol::Symbol;
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
+#[derive(
+    Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize,
+)]
 pub(crate) struct Diagram {
     #[serde(alias = "external momenta", default)]
     pub(crate) external_momenta: Vec<(u32, NumOrString)>,
     pub(crate) propagators: Vec<(u32, u32, NumOrString, NumOrString)>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize)]
+#[derive(
+    Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize,
+)]
 #[serde(untagged)]
 pub(crate) enum NumOrString {
     Num(i64),
-    String(String)
+    String(String),
 }
 
 impl From<NumOrString> for String {
     fn from(s: NumOrString) -> Self {
         match s {
             NumOrString::Num(num) => num.to_string(),
-            NumOrString::String(s) => s
+            NumOrString::String(s) => s,
         }
     }
 }
@@ -46,7 +52,7 @@ impl Display for NumOrString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             NumOrString::Num(num) => num.fmt(f),
-            NumOrString::String(s) => s.fmt(f)
+            NumOrString::String(s) => s.fmt(f),
         }
     }
 }
@@ -68,10 +74,12 @@ impl TryFrom<NumOrString> for Momentum {
 #[derive(Debug, Error)]
 pub(crate) enum ImportError {
     #[error("Failed to parse momentum: {0}")]
-    MomentumParseError(String)
+    MomentumParseError(String),
 }
 
-impl<'a> std::convert::From<nom::Err<nom::error::Error<&'a str>>> for ImportError {
+impl<'a> std::convert::From<nom::Err<nom::error::Error<&'a str>>>
+    for ImportError
+{
     fn from(e: nom::Err<nom::error::Error<&'a str>>) -> Self {
         ImportError::MomentumParseError(e.to_string())
     }
@@ -84,9 +92,13 @@ impl TryFrom<Diagram> for UnGraph<Momentum, EdgeWeight> {
         use petgraph::visit::NodeIndexable;
 
         let nprops = dia.propagators.len();
-        let nvertices = dia.propagators.iter().map(
-            |(from, to, _, _)| max(*from, *to)
-        ).max().unwrap() + 1;
+        let nvertices = dia
+            .propagators
+            .iter()
+            .map(|(from, to, _, _)| max(*from, *to))
+            .max()
+            .unwrap()
+            + 1;
         let mut res = UnGraph::with_capacity(nvertices as usize, nprops);
         for _ in 0..nvertices {
             res.add_node(Momentum::zero());
@@ -97,7 +109,7 @@ impl TryFrom<Diagram> for UnGraph<Momentum, EdgeWeight> {
             let to = res.from_index(to as usize);
             let p = p.try_into()?;
             let m = m.into();
-            res.add_edge(from, to, EdgeWeight{p, m});
+            res.add_edge(from, to, EdgeWeight { p, m });
         }
 
         for (id, p) in dia.external_momenta {
@@ -112,7 +124,12 @@ impl TryFrom<Diagram> for UnGraph<Momentum, EdgeWeight> {
 #[derive(Clone, Debug, Default, Derivative)]
 #[derivative(Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub(crate) struct EdgeWeight {
-    #[derivative(PartialEq="ignore", PartialOrd="ignore", Ord="ignore", Hash="ignore")]
+    #[derivative(
+        PartialEq = "ignore",
+        PartialOrd = "ignore",
+        Ord = "ignore",
+        Hash = "ignore"
+    )]
     pub(crate) p: Momentum,
     pub(crate) m: String,
 }
@@ -121,25 +138,24 @@ fn momentum(input: &str) -> IResult<&str, Momentum> {
     use Sign::*;
     use TermOrZero::*;
     let (rest, (sign, first_term, terms)) = tuple((
-        opt(sign), preceded(multispace0, term_or_zero),
+        opt(sign),
+        preceded(multispace0, term_or_zero),
         many0(pair(
             preceded(multispace0, sign),
             preceded(multispace0, term_or_zero),
-        ))
+        )),
     ))(input)?;
     let sign = sign.unwrap_or(Plus);
     let p = Momentum::from_iter(
         once((sign, first_term))
             .chain(terms.into_iter())
-            .filter_map(
-                |(s, term)| if let Term(term) = term {
-                    Some(
-                        if s == Minus { -term } else { term }
-                    )
+            .filter_map(|(s, term)| {
+                if let Term(term) = term {
+                    Some(if s == Minus { -term } else { term })
                 } else {
                     None
                 }
-            )
+            }),
     );
     Ok((rest, p))
 }
@@ -156,13 +172,14 @@ fn sign(input: &str) -> IResult<&str, Sign> {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 enum Sign {
-    Plus, Minus
+    Plus,
+    Minus,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 enum TermOrZero {
     Zero,
-    Term(Term)
+    Term(Term),
 }
 
 fn term_or_zero(input: &str) -> IResult<&str, TermOrZero> {
@@ -179,7 +196,7 @@ fn term(input: &str) -> IResult<&str, Term> {
     let (rest, (coeff, sym)) = separated_pair(
         opt(terminated(u32, pair(multispace0, char('*')))),
         multispace0,
-        var
+        var,
     )(input)?;
     let sym = Symbol::new_unchecked(sym);
     let term = if let Some(coeff) = coeff {

@@ -4,28 +4,24 @@ use derivative::Derivative;
 use log::trace;
 use nauty_pet::prelude::*;
 use petgraph::{
-    EdgeType,
     graph::{IndexType, UnGraph},
-    Graph,
     visit::EdgeRef,
-    Undirected
+    EdgeType, Graph, Undirected,
 };
 
-use crate::yaml_dias::EdgeWeight;
 use crate::momentum::Momentum;
+use crate::yaml_dias::EdgeWeight;
 
 // Similar to nauty_pet's canonisation, but keep track of momentum directions
 pub(crate) fn into_canon(
-    g: UnGraph<Momentum, EdgeWeight>
+    g: UnGraph<Momentum, EdgeWeight>,
 ) -> CanonGraph<Momentum, EdgeWeight, Undirected> {
     let mut node_nr = 0;
-    let canon = CanonGraph::from(
-        transform_nodes(g.clone(), |p| {
-            let n = NodeWeight{ id: node_nr, p};
-            node_nr += 1;
-            n
-        })
-    );
+    let canon = CanonGraph::from(transform_nodes(g.clone(), |p| {
+        let n = NodeWeight { id: node_nr, p };
+        node_nr += 1;
+        n
+    }));
     trace!("Canonically labelled: {canon:#?}");
 
     let mut relabel = vec![0; canon.node_count()];
@@ -42,7 +38,12 @@ pub(crate) fn into_canon(
 #[derive(Clone, Debug, Default, Derivative)]
 #[derivative(Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub(crate) struct NodeWeight {
-    #[derivative(PartialEq="ignore", PartialOrd="ignore", Ord="ignore", Hash="ignore")]
+    #[derivative(
+        PartialEq = "ignore",
+        PartialOrd = "ignore",
+        Ord = "ignore",
+        Hash = "ignore"
+    )]
     pub(crate) id: u32,
     pub(crate) p: Momentum,
 }
@@ -63,7 +64,7 @@ fn apply_perm<T>(slice: &mut [T], mut new_pos: Vec<usize>) {
 
 fn relabel_nodes(
     g: UnGraph<Momentum, EdgeWeight>,
-    relabel: Vec<usize>
+    relabel: Vec<usize>,
 ) -> UnGraph<Momentum, EdgeWeight> {
     let (mut nodes, mut edges) = into_nodes_edges(g);
     for edge in &mut edges {
@@ -80,7 +81,7 @@ fn relabel_nodes(
 }
 
 fn into_nodes_edges<N, E, Ty, Ix>(
-    g: Graph<N, E, Ty, Ix>
+    g: Graph<N, E, Ty, Ix>,
 ) -> (Vec<N>, Vec<(usize, usize, E)>)
 where
     Ty: EdgeType,
@@ -127,10 +128,13 @@ where
             .map(|e| (g.to_index(e.source()), g.to_index(e.target()))),
     );
     let (nodes, e) = g.into_nodes_edges();
-    let nodes = nodes.into_iter()
+    let nodes = nodes
+        .into_iter()
         .map(|n| node_transform(n.weight))
         .collect();
-    let edges = edges.into_iter().zip(e.into_iter().map(|e| e.weight))
+    let edges = edges
+        .into_iter()
+        .zip(e.into_iter().map(|e| e.weight))
         .map(|((from, to), wt)| (from, to, edge_transform(wt)))
         .collect();
     (nodes, edges)
@@ -147,7 +151,8 @@ where
     F: FnMut(N) -> NN,
     G: FnMut(E) -> EE,
 {
-    let (nodes, edges) = into_transformed_nodes_edges(g, node_transform, edge_transform);
+    let (nodes, edges) =
+        into_transformed_nodes_edges(g, node_transform, edge_transform);
     from_nodes_edges(nodes, edges)
 }
 

@@ -1,14 +1,25 @@
-use std::fmt::{self, Display};
 use std::cmp::Ordering;
 use std::convert::From;
-use std::ops::{Add, AddAssign, Sub, SubAssign, Neg, Mul, MulAssign};
+use std::fmt::{self, Display};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use crate::symbol::Symbol;
 
 use num_traits::Zero;
 use serde::{Deserialize, Deserializer, Serialize};
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Deserialize,
+    Serialize,
+)]
 pub struct Term {
     pub(crate) symbol: Symbol,
     pub(crate) coeff: i32,
@@ -16,7 +27,7 @@ pub struct Term {
 
 impl Term {
     pub fn new(coeff: i32, symbol: Symbol) -> Term {
-        Term{ symbol, coeff }
+        Term { symbol, coeff }
     }
 
     pub fn symbol(&self) -> Symbol {
@@ -30,7 +41,7 @@ impl Term {
 
 impl From<Symbol> for Term {
     fn from(symbol: Symbol) -> Self {
-        Self { symbol, coeff: 1}
+        Self { symbol, coeff: 1 }
     }
 }
 
@@ -72,12 +83,23 @@ impl Display for Term {
             0 => '0'.fmt(f),
             1 => self.symbol.fmt(f),
             -1 => write!(f, "-{}", self.symbol),
-            coeff => write!(f,"{coeff}*{}", self.symbol)
+            coeff => write!(f, "{coeff}*{}", self.symbol),
         }
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[derive(
+    Debug,
+    Default,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Deserialize,
+    Serialize,
+)]
 #[serde(transparent)]
 pub struct Momentum {
     #[serde(deserialize_with = "deserialize_terms")]
@@ -85,7 +107,7 @@ pub struct Momentum {
 }
 
 fn deserialize_terms<'de, D: Deserializer<'de>>(
-    d: D
+    d: D,
 ) -> Result<Vec<Term>, D::Error> {
     let mut terms = <Vec<Term>>::deserialize(d)?;
     terms.sort_unstable();
@@ -109,7 +131,7 @@ impl Momentum {
 impl FromIterator<Term> for Momentum {
     fn from_iter<T>(iter: T) -> Self
     where
-        T: IntoIterator<Item = Term>
+        T: IntoIterator<Item = Term>,
     {
         let mut iter = iter.into_iter();
         if let Some(first) = iter.next() {
@@ -140,14 +162,16 @@ impl From<Term> for Momentum {
         if t.coeff == 0 {
             Momentum::zero()
         } else {
-            Momentum{ terms: vec![t] }
+            Momentum { terms: vec![t] }
         }
     }
 }
 
 impl From<Symbol> for Momentum {
     fn from(s: Symbol) -> Self {
-        Momentum{ terms: vec![s.into()] }
+        Momentum {
+            terms: vec![s.into()],
+        }
     }
 }
 
@@ -255,16 +279,16 @@ impl AddAssign<&Momentum> for Momentum {
                 Ordering::Less => {
                     res.push(*tt1);
                     t1 = it1.next();
-                },
+                }
                 Ordering::Greater => {
                     res.push(*tt2);
                     t2 = it2.next();
-                },
+                }
                 Ordering::Equal => {
                     let coeff = tt1.coeff + tt2.coeff;
                     if coeff != 0 {
                         let symbol = tt1.symbol;
-                        res.push(Term{ coeff, symbol });
+                        res.push(Term { coeff, symbol });
                     }
                     t1 = it1.next();
                     t2 = it2.next();
@@ -292,15 +316,15 @@ impl AddAssign<Momentum> for Momentum {
 impl AddAssign<Term> for Momentum {
     fn add_assign(&mut self, rhs: Term) {
         let sym = &rhs.symbol;
-        let pos = self.terms.binary_search_by_key(sym,|t| t.symbol);
+        let pos = self.terms.binary_search_by_key(sym, |t| t.symbol);
         match pos {
             Ok(pos) => {
                 self.terms[pos].coeff += rhs.coeff;
                 if self.terms[pos].coeff == 0 {
                     self.terms.remove(pos);
                 }
-            },
-            Err(pos) => self.terms.insert(pos, rhs)
+            }
+            Err(pos) => self.terms.insert(pos, rhs),
         }
     }
 }
@@ -318,16 +342,16 @@ impl SubAssign<&Momentum> for Momentum {
                 Ordering::Less => {
                     res.push(*tt1);
                     t1 = it1.next();
-                },
+                }
                 Ordering::Greater => {
                     res.push(tt2);
                     t2 = it2.next();
-                },
+                }
                 Ordering::Equal => {
                     let coeff = tt1.coeff + tt2.coeff;
                     if coeff != 0 {
                         let symbol = tt1.symbol;
-                        res.push(Term{ coeff, symbol });
+                        res.push(Term { coeff, symbol });
                     }
                     t1 = it1.next();
                     t2 = it2.next();
@@ -355,15 +379,15 @@ impl SubAssign<Momentum> for Momentum {
 impl SubAssign<Term> for Momentum {
     fn sub_assign(&mut self, rhs: Term) {
         let sym = &rhs.symbol;
-        let pos = self.terms.binary_search_by_key(sym,|t| t.symbol);
+        let pos = self.terms.binary_search_by_key(sym, |t| t.symbol);
         match pos {
             Ok(pos) => {
                 self.terms[pos].coeff -= rhs.coeff;
                 if self.terms[pos].coeff == 0 {
                     self.terms.remove(pos);
                 }
-            },
-            Err(pos) => self.terms.insert(pos, rhs)
+            }
+            Err(pos) => self.terms.insert(pos, rhs),
         }
     }
 }
@@ -450,7 +474,7 @@ mod tests {
         let x = Momentum::from(x);
         let y = Momentum::from(y);
         assert_eq!(Momentum::zero(), &x - &x);
-        assert_eq!(2*&x, &x + &x);
+        assert_eq!(2 * &x, &x + &x);
         assert_eq!(Momentum::zero(), &x + &y - &x - &y);
     }
 }
