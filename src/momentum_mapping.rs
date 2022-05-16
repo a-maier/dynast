@@ -26,7 +26,7 @@ pub(crate) struct Mapping {
 impl Display for Mapping {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut sorted = Vec::from_iter(self.map.iter());
-        sorted.sort_unstable();
+        sorted.sort();
         let output = sorted.iter().map(|(s, p)| format!("{s}: {p}")).join(", ");
         write!(f, "{{{output}}}")
     }
@@ -67,12 +67,12 @@ impl Mapping {
             ));
         }
         let mut loop_momenta = Vec::from_iter(loop_momenta);
-        loop_momenta.sort_unstable();
+        loop_momenta.sort();
         let loop_momentum_pos = IndexMap::from_iter(
             loop_momenta.iter().enumerate().map(|(n, p)| (*p, n)),
         );
         let mut ext_momenta = Vec::from_iter(ext_momenta);
-        ext_momenta.sort_unstable();
+        ext_momenta.sort();
         let ext_momentum_pos = IndexMap::from_iter(
             ext_momenta.iter().enumerate().map(|(n, p)| (*p, n)),
         );
@@ -84,7 +84,7 @@ impl Mapping {
             debug_assert_eq!(from.weight().m, to.weight().m);
             shifts.push(Shift::new(&from.weight().p, &to.weight().p));
         }
-        shifts.sort_unstable();
+        shifts.sort();
         for shift in &shifts {
             debug!("{shift}");
         }

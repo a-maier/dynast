@@ -75,7 +75,7 @@ fn relabel_nodes(
             edge.2.p *= -1;
         }
     }
-    edges.sort_unstable();
+    edges.sort();
     apply_perm(&mut nodes, relabel);
     from_nodes_edges(nodes, edges)
 }
