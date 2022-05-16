@@ -5,30 +5,22 @@ mod symbol;
 mod yaml_dias;
 mod yaml_doc_iter;
 
-use std::collections::hash_map::Entry;
-use std::convert::identity;
 use std::path::PathBuf;
 use std::io::{BufReader, BufWriter, Write};
 use std::fs::File;
 use std::convert::TryFrom;
 
-use ahash::{AHashMap, AHashSet};
+use ahash::AHashMap;
 use anyhow::{Context, Result};
 use clap::Parser;
 use indexmap::IndexMap;
 use log::{info, debug, trace};
 use nauty_pet::prelude::*;
-use petgraph::{
-    graph::{IndexType, UnGraph},
-    EdgeType,
-    Graph,
-    visit::EdgeRef,
-};
+use petgraph::Graph;
 
 use crate::canon::into_canon;
-use crate::momentum::Momentum;
 use crate::momentum_mapping::Mapping;
-use crate::yaml_dias::{NumOrString, Diagram, EdgeWeight};
+use crate::yaml_dias::{NumOrString, Diagram};
 use crate::yaml_doc_iter::YamlDocIter;
 
 /// Map diagrams onto topologies

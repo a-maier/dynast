@@ -3,7 +3,6 @@ use std::convert::identity;
 use derivative::Derivative;
 use log::trace;
 use nauty_pet::prelude::*;
-use num_traits::Zero;
 use petgraph::{
     EdgeType,
     graph::{IndexType, UnGraph},
@@ -46,12 +45,6 @@ pub(crate) struct NodeWeight {
     #[derivative(PartialEq="ignore", PartialOrd="ignore", Ord="ignore", Hash="ignore")]
     pub(crate) id: u32,
     pub(crate) p: Momentum,
-}
-
-impl NodeWeight {
-    fn new(id: u32) -> Self {
-        Self { id, p: Momentum::zero() }
-    }
 }
 
 fn apply_perm<T>(slice: &mut [T], mut new_pos: Vec<usize>) {
@@ -156,18 +149,6 @@ where
 {
     let (nodes, edges) = into_transformed_nodes_edges(g, node_transform, edge_transform);
     from_nodes_edges(nodes, edges)
-}
-
-fn transform_edges<N, E, EE, Ty, Ix, F>(
-    g: Graph<N, E, Ty, Ix>,
-    edge_transform: F,
-) -> Graph<N, EE, Ty, Ix>
-where
-    Ty: EdgeType,
-    Ix: IndexType,
-    F: FnMut(E) -> EE,
-{
-    transform_nodes_edges(g, identity, edge_transform)
 }
 
 fn transform_nodes<N, NN, E, Ty, Ix, F>(

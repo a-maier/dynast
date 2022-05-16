@@ -12,7 +12,7 @@ use nom::{
     sequence::{preceded, separated_pair, pair, terminated, tuple},
 };
 use num_traits::Zero;
-use petgraph::{graph::UnGraph, Undirected};
+use petgraph::graph::UnGraph;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -88,7 +88,7 @@ impl TryFrom<Diagram> for UnGraph<Momentum, EdgeWeight> {
             |(from, to, _, _)| max(*from, *to)
         ).max().unwrap() + 1;
         let mut res = UnGraph::with_capacity(nvertices as usize, nprops);
-        for id in 0..nvertices {
+        for _ in 0..nvertices {
             res.add_node(Momentum::zero());
         }
 
