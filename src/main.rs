@@ -1,11 +1,11 @@
 mod canon;
+mod mapper;
 mod momentum;
 mod momentum_mapping;
 mod symbol;
 mod yaml_dias;
 mod yaml_doc_iter;
 
-use std::convert::TryFrom;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 use std::path::PathBuf;
@@ -14,13 +14,10 @@ use ahash::RandomState;
 use anyhow::{Context, Result};
 use clap::Parser;
 use log::{debug, info, trace};
-use nauty_pet::prelude::*;
-use petgraph::Graph;
 
-use crate::canon::into_canon;
-use crate::momentum_mapping::Mapping;
 use crate::yaml_dias::{Diagram, NumOrString};
 use crate::yaml_doc_iter::YamlDocIter;
+use crate::mapper::TopMapper;
 
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 
@@ -38,7 +35,7 @@ struct Args {
 }
 
 fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
-    let mut seen: IndexMap<CanonGraph<_, _, _>, _> = IndexMap::default();
+    let mut mapper = TopMapper::new();
 
     for filename in &args.infiles {
         info!("Reading diagrams from {filename:?}");
@@ -68,23 +65,10 @@ fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
             };
             for (name, dia) in dias {
                 debug!("Read {name}: {dia:#?}");
-                let graph = Graph::try_from(dia)
-                    .with_context(|| format!("Parsing diagram {name}"))?;
-                trace!("Graph {graph:#?}");
-
-                let canon = into_canon(graph);
-
-                if let Some((known, topname)) = seen.get_key_value(&canon) {
-                    let mapping = Mapping::new(canon.get(), known.get())?;
-                    writeln!(out, "{name}: [{topname}, {mapping}]")?;
-                } else {
-                    writeln!(
-                        out,
-                        "{name}: [{name}, {}]",
-                        Mapping::identity(canon.get())
-                    )?;
-                    seen.insert(canon, name);
-                }
+                let (topname, map) = mapper.map_dia(name.clone(), dia).with_context(
+                    || format!("Mapping diagram {name}")
+                )?;
+                writeln!(out, "{name}: [{topname}, {map}]")?;
             }
         }
     }
