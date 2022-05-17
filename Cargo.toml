@@ -7,18 +7,18 @@ edition = "2021"
 ahash = { version = "0.7", features = ["serde"] }
 anyhow = "1.0"
 clap = { version = "3.0", features = ["derive"] }
-derivative = "2.2.0"
+derivative = "2.2"
 env_logger = "0.9"
 indexmap = { version = "1.8", features = ["serde"] }
-itertools = "0.10.3"
+itertools = "0.10"
 lazy_static = "1.4"
 log = "0.4"
-memmap = "0.7.0"
-nalgebra = "0.31.0"
+memmap = "0.7"
+nalgebra = "0.31"
 nauty-pet = "0.6"
 nom = "7"
 num-rational = { version = "0.4", features = ["serde"] }
-num-traits = "0.2.15"
+num-traits = "0.2"
 petgraph = "0.6"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
