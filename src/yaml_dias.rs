@@ -25,9 +25,8 @@ use crate::symbol::Symbol;
 #[derive(
     Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize,
 )]
+#[serde(transparent)]
 pub(crate) struct Diagram {
-    #[serde(alias = "external momenta", default)]
-    pub(crate) external_momenta: Vec<(u32, NumOrString)>,
     pub(crate) propagators: Vec<(u32, u32, NumOrString, NumOrString)>,
 }
 
@@ -110,14 +109,11 @@ impl TryFrom<Diagram> for UnGraph<Momentum, EdgeWeight> {
             let to = res.from_index(to as usize);
             let p = p.try_into()?;
             let m = m.into();
+            *res.node_weight_mut(from).unwrap() -= &p;
+            *res.node_weight_mut(to).unwrap() += &p;
             res.add_edge(from, to, EdgeWeight { p, m });
         }
 
-        for (id, p) in dia.external_momenta {
-            let id = res.from_index(id as usize);
-            let p = Momentum::try_from(p)?;
-            *res.node_weight_mut(id).unwrap() += p;
-        }
         Ok(res)
     }
 }
@@ -233,12 +229,7 @@ pub(crate) struct FormatDia<'a> (
 impl<'a> Display for FormatDia<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Graph {{
-   external momenta: {{")?;
-        for (n, p) in &self.0.external_momenta {
-            write!(f, "{n}: {p}, ")?;
-        }
-        writeln!(f, "}},
-   propagators: [")?;
+   [")?;
         for (from, to, p, m) in &self.0.propagators {
             writeln!(f, "      [({from}, {to}), {p}, {m}],")?
         }
