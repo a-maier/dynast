@@ -5,7 +5,7 @@ use ahash::RandomState;
 use itertools::{izip, join, Itertools};
 use log::{debug, trace};
 use nalgebra::{
-    DMatrix, Dim, Matrix, MatrixSliceMut, RawStorage, RawStorageMut, U1,
+    DMatrix, Dim, Matrix, MatrixSliceMut, RawStorage, U1,
 };
 use num_traits::Zero;
 use petgraph::{graph::UnGraph, visit::EdgeRef};
@@ -94,32 +94,18 @@ impl Mapping {
         let (l, q, lp, qp) =
             to_matrices(&shifts, &loop_momentum_pos, &ext_momentum_pos);
 
-        let (lred, qred, mut lpred, mut qpred) =
+        let (lred, qred, lpred, qpred) =
             trunc_independent(l.clone(), q.clone(), lp.clone(), qp.clone());
 
         trace!("{lred} * l + {qred} * q -> {lpred} * l + {qpred} * q");
         let linv = lred.try_inverse().unwrap();
-        for signs in 0..2usize.pow(lpred.ncols() as u32) {
-            apply_signs(&mut lpred, signs);
-            apply_signs(&mut qpred, signs);
+        let o = &linv * &lpred;
+        let s = &linv * (&qpred - &qred);
 
-            let o = &linv * &lpred;
-            let s = &linv * (&qpred - &qred);
-            let (l_new, q_new) = normalise_row_signs(&l * &o, &l * &s + &q);
-            trace!("Shifted with sign {signs}: {l_new} * l + {q_new} * q");
-            if l_new == lp && q_new == qp {
-                return Ok(Self::from_matrices(
-                    &o,
-                    &s,
-                    &loop_momenta,
-                    &ext_momenta,
-                ));
-            }
+        debug_assert_eq!(lp, &l * &o);
+        debug_assert_eq!(qp, &l * &s + &q);
 
-            apply_signs(&mut qpred, signs);
-            apply_signs(&mut lpred, signs);
-        }
-        unreachable!()
+        Ok(Self::from_matrices(&o, &s, &loop_momenta, &ext_momenta))
     }
 
     fn from_matrices<R, C, S>(
@@ -159,30 +145,6 @@ impl Mapping {
     }
 }
 
-fn normalise_row_signs<R, C, S>(
-    mut l: Matrix<f64, R, C, S>,
-    mut q: Matrix<f64, R, C, S>,
-) -> (Matrix<f64, R, C, S>, Matrix<f64, R, C, S>)
-where
-    C: Dim,
-    R: Dim,
-    S: RawStorageMut<f64, R, C>,
-{
-    for (mut lrow, mut qrow) in l.row_iter_mut().zip(q.row_iter_mut()) {
-        let sign_flip = lrow
-            .iter()
-            .chain(qrow.iter())
-            .find(|&&e| e != 0.)
-            .map(|&e| e < 0.)
-            .unwrap_or(false);
-        if sign_flip {
-            lrow *= -1.;
-            qrow *= -1.;
-        }
-    }
-    (l, q)
-}
-
 fn to_matrices(
     shifts: &[Shift],
     lpos: &IndexMap<Symbol, usize>,
@@ -218,33 +180,13 @@ impl<'a> CoeffExtract<'a> {
         C: Dim,
         R: Dim,
     {
-        let sign = match p.terms().first() {
-            Some(term) if term.coeff() < 0 => -1,
-            _ => 1,
-        } as f64;
         for term in p.terms() {
             if let Some(&col) = self.lpos.get(&term.symbol()) {
-                l[col] = sign * term.coeff() as f64;
+                l[col] = term.coeff() as f64;
             } else {
                 let col = *self.qpos.get(&term.symbol()).unwrap();
-                q[col] = sign * term.coeff() as f64;
+                q[col] = term.coeff() as f64;
             };
-        }
-    }
-}
-
-pub fn apply_signs<T, R, C, S>(m: &mut Matrix<T, R, C, S>, signs: usize)
-where
-    T: std::ops::MulAssign<f64>,
-    R: Dim,
-    C: Dim,
-    S: RawStorage<T, R, C> + RawStorageMut<T, R, C>,
-{
-    for i in 0..m.nrows() {
-        if ((signs >> i) & 1) == 1 {
-            for e in m.row_mut(i).iter_mut() {
-                *e *= -1.
-            }
         }
     }
 }
