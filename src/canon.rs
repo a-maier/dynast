@@ -11,6 +11,7 @@ use petgraph::{
     EdgeType, Graph, Undirected,
 };
 
+use crate::graph_util::Format;
 use crate::momentum::Momentum;
 use crate::yaml_dias::EdgeWeight;
 
@@ -32,7 +33,7 @@ pub(crate) fn into_canon(
     }
     trace!("Relabelling: {relabel:?}");
     let g = relabel_nodes(g, relabel);
-    trace!("Relabelled {g:#?}");
+    trace!("Relabelled {}", g.format());
     debug_assert!(g.is_identical(CanonGraph::from(g.clone()).get()));
     g.into()
 }

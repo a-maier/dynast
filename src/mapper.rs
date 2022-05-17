@@ -7,6 +7,7 @@ use petgraph::{graph::UnGraph, Graph, Undirected, visit::EdgeRef};
 use thiserror::Error;
 
 use crate::canon::{contract_edge, into_canon};
+use crate::graph_util::{Format};
 use crate::momentum::Momentum;
 use crate::momentum_mapping::{Mapping, MappingError};
 use crate::yaml_dias::{Diagram, EdgeWeight, ImportError, NumOrString};
@@ -29,7 +30,7 @@ impl TopMapper {
         name: NumOrString,
         dia: Diagram,
     ) -> Result<(NumOrString, Mapping), TopMapError> {
-        debug!("Mapping diagram {dia:#?}");
+        debug!("Mapping diagram {name}: {}", dia.format());
         let graph = Graph::try_from(dia)?;
 
         self.map_graph(name, graph)
@@ -41,14 +42,16 @@ impl TopMapper {
         name: NumOrString,
         graph: UnGraph<Momentum, EdgeWeight>,
     ) -> Result<(NumOrString, Mapping), TopMapError> {
-        debug!("Mapping graph {graph:#?}");
+        debug!("Mapping graph {name}: {}", graph.format());
         let canon = into_canon(graph);
 
         if let Some((target, topname)) = self.seen.get_key_value(&canon) {
+            debug!("{name} is {topname}");
             let map = Mapping::new(canon.get(), target.get())?;
             return Ok((topname.clone(), map));
         };
 
+        debug!("{name} is a new topology");
         let map = Mapping::identity(canon.get());
         if self.add_subgraphs {
             self.insert_subgraphs(canon, name.clone())
@@ -63,7 +66,7 @@ impl TopMapper {
         graph: CanonGraph<Momentum, EdgeWeight, Undirected>,
         name: NumOrString,
     ) {
-        trace!("Inserting {graph:#?}");
+        trace!("Inserting {}", graph.get().format());
         let contractible_edges = graph.edge_references().enumerate()
             .filter_map(
                 |(e, edge)| if edge.source() != edge.target() {

@@ -1,4 +1,5 @@
 mod canon;
+mod graph_util;
 mod mapper;
 mod momentum;
 mod momentum_mapping;
@@ -15,6 +16,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use log::{debug, info, trace};
 
+use crate::graph_util::Format;
 use crate::yaml_dias::{Diagram, NumOrString};
 use crate::yaml_doc_iter::YamlDocIter;
 use crate::mapper::TopMapper;
@@ -71,7 +73,7 @@ fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
                 }
             };
             for (name, dia) in dias {
-                debug!("Read {name}: {dia:#?}");
+                debug!("Read {name}: {}", dia.format());
                 let (topname, map) = mapper.map_dia(name.clone(), dia).with_context(
                     || format!("Mapping diagram {name}")
                 )?;

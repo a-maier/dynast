@@ -11,6 +11,7 @@ use num_traits::Zero;
 use petgraph::{graph::UnGraph, visit::EdgeRef};
 use thiserror::Error;
 
+use crate::graph_util::Format;
 use crate::momentum::{Momentum, Term};
 use crate::symbol::Symbol;
 use crate::yaml_dias::EdgeWeight;
@@ -52,6 +53,7 @@ impl Mapping {
         from: &UnGraph<Momentum, EdgeWeight>,
         to: &UnGraph<Momentum, EdgeWeight>,
     ) -> Result<Self, MappingError> {
+        debug!("Mapping {} onto {}", from.format(), to.format());
         if !shift_needed(from, to) {
             return Ok(Self::identity(from));
         }

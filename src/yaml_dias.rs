@@ -1,6 +1,6 @@
 use std::cmp::max;
 use std::convert::TryFrom;
-use std::fmt::Display;
+use std::fmt::{self, Display};
 use std::iter::once;
 
 use derivative::Derivative;
@@ -18,6 +18,7 @@ use petgraph::graph::UnGraph;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::graph_util::Format;
 use crate::momentum::{Momentum, Term};
 use crate::symbol::Symbol;
 
@@ -49,7 +50,7 @@ impl From<NumOrString> for String {
 }
 
 impl Display for NumOrString {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             NumOrString::Num(num) => num.fmt(f),
             NumOrString::String(s) => s.fmt(f),
@@ -216,6 +217,35 @@ fn u32(input: &str) -> IResult<&str, u32> {
     let (rest, num) = digit1(input)?;
     Ok((rest, num.parse().unwrap()))
 }
+
+impl<'a> Format<'a> for Diagram {
+    type Output = FormatDia<'a>;
+
+    fn format(&'a self) -> Self::Output {
+        FormatDia(&self)
+    }
+}
+
+pub(crate) struct FormatDia<'a> (
+    &'a Diagram
+);
+
+impl<'a> Display for FormatDia<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Graph {{
+   external momenta: {{")?;
+        for (n, p) in &self.0.external_momenta {
+            write!(f, "{n}: {p}, ")?;
+        }
+        writeln!(f, "}},
+   propagators: [")?;
+        for (from, to, p, m) in &self.0.propagators {
+            writeln!(f, "      [({from}, {to}), {p}, {m}],")?
+        }
+        writeln!(f, "   ],\n}}")
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
