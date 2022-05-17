@@ -1,4 +1,6 @@
+use std::ops::AddAssign;
 use std::convert::identity;
+use std::cmp::Ordering;
 
 use derivative::Derivative;
 use log::trace;
@@ -166,4 +168,48 @@ where
     F: FnMut(N) -> NN,
 {
     transform_nodes_edges(g, node_transform, identity)
+}
+
+fn contract_graph_edge<N, E, Ty, Ix>(
+    g: Graph<N, E, Ty, Ix>,
+    idx: usize
+) -> Graph<N, E, Ty, Ix>
+where
+    N: AddAssign,
+    Ty: EdgeType,
+    Ix: IndexType,
+{
+    let (mut nodes, mut edges) = into_nodes_edges(g);
+    let contracted = edges.remove(idx);
+    let (merged, removed) = minmax(contracted.0, contracted.1);
+    if merged != removed {
+        let removed_node = nodes.remove(removed);
+        nodes[merged] += removed_node;
+        for edge in &mut edges {
+            for vx in [&mut edge.0, &mut edge.1] {
+                match removed.cmp(vx) {
+                    Ordering::Less => *vx -= 1,
+                    Ordering::Equal => *vx = merged,
+                    Ordering::Greater => { }
+                }
+            }
+        }
+    }
+    from_nodes_edges(nodes, edges)
+}
+
+pub(crate) fn contract_edge(
+    g: CanonGraph<Momentum, EdgeWeight, Undirected>,
+    idx: usize
+) -> CanonGraph<Momentum, EdgeWeight, Undirected>
+{
+    into_canon(contract_graph_edge(g.into(), idx))
+}
+
+fn minmax<T: Ord>(s: T, t: T) -> (T, T) {
+    if s < t {
+        (s, t)
+    } else {
+        (t, s)
+    }
 }

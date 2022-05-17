@@ -25,6 +25,10 @@ type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 #[derive(Parser, Debug)]
 #[clap(version, about, long_about = None)]
 struct Args {
+    /// Whether to allow mapping on subtopologies
+    #[clap(short, long)]
+    subtopologies: bool,
+
     /// Output file
     #[clap(short, long)]
     outfile: Option<PathBuf>,
@@ -36,6 +40,9 @@ struct Args {
 
 fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
     let mut mapper = TopMapper::new();
+    if args.subtopologies {
+        mapper.add_subgraphs = true;
+    }
 
     for filename in &args.infiles {
         info!("Reading diagrams from {filename:?}");

@@ -1,12 +1,12 @@
 use std::convert::TryFrom;
 
 use ahash::RandomState;
-use log::trace;
+use log::{debug, trace};
 use nauty_pet::prelude::*;
-use petgraph::{Graph, Undirected};
+use petgraph::{graph::UnGraph, Graph, Undirected, visit::EdgeRef};
 use thiserror::Error;
 
-use crate::canon::into_canon;
+use crate::canon::{contract_edge, into_canon};
 use crate::momentum::Momentum;
 use crate::momentum_mapping::{Mapping, MappingError};
 use crate::yaml_dias::{Diagram, EdgeWeight, ImportError, NumOrString};
@@ -16,6 +16,7 @@ type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(crate) struct TopMapper {
     seen: IndexMap<CanonGraph<Momentum, EdgeWeight, Undirected>, NumOrString>,
+    pub(crate) add_subgraphs: bool
 }
 
 impl TopMapper {
@@ -23,15 +24,24 @@ impl TopMapper {
         Self::default()
     }
 
-    // TODO: borrow checker complains if we return a `&NumOrString`
     pub(crate) fn map_dia(
         &mut self,
         name: NumOrString,
         dia: Diagram,
     ) -> Result<(NumOrString, Mapping), TopMapError> {
+        debug!("Mapping diagram {dia:#?}");
         let graph = Graph::try_from(dia)?;
-        trace!("Graph {graph:#?}");
 
+        self.map_graph(name, graph)
+    }
+
+    // TODO: borrow checker complains if we return a `&NumOrString`
+    pub(crate) fn map_graph(
+        &mut self,
+        name: NumOrString,
+        graph: UnGraph<Momentum, EdgeWeight>,
+    ) -> Result<(NumOrString, Mapping), TopMapError> {
+        debug!("Mapping graph {graph:#?}");
         let canon = into_canon(graph);
 
         if let Some((target, topname)) = self.seen.get_key_value(&canon) {
@@ -40,10 +50,39 @@ impl TopMapper {
         };
 
         let map = Mapping::identity(canon.get());
-        self.seen.insert(canon, name.clone());
+        if self.add_subgraphs {
+            self.insert_subgraphs(canon, name.clone())
+        } else {
+            self.seen.insert(canon, name.clone());
+        }
         Ok((name, map))
     }
+
+    fn insert_subgraphs(
+        &mut self,
+        graph: CanonGraph<Momentum, EdgeWeight, Undirected>,
+        name: NumOrString,
+    ) {
+        trace!("Inserting {graph:#?}");
+        let contractible_edges = graph.edge_references().enumerate()
+            .filter_map(
+                |(e, edge)| if edge.source() != edge.target() {
+                    Some(e)
+                } else {
+                    None
+                }
+            );
+        for edge in contractible_edges {
+            trace!("Contracting edge {edge}");
+            let subgraph = contract_edge(graph.clone(), edge);
+            if !self.seen.contains_key(&subgraph) {
+                self.insert_subgraphs(subgraph, name.clone())
+            }
+        }
+        self.seen.insert(graph, name);
+    }
 }
+
 
 #[derive(Debug, Error)]
 pub(crate) enum TopMapError{
