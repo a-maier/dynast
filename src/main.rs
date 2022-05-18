@@ -7,6 +7,7 @@ mod symbol;
 mod yaml_dias;
 mod yaml_doc_iter;
 mod writer;
+mod version;
 
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
@@ -15,12 +16,14 @@ use std::path::PathBuf;
 use ahash::RandomState;
 use anyhow::{Context, Result};
 use clap::Parser;
+use env_logger::Env;
 use log::{debug, info, trace};
 
 use crate::graph_util::Format;
 use crate::yaml_dias::{Diagram, NumOrString};
 use crate::yaml_doc_iter::YamlDocIter;
 use crate::mapper::TopMapper;
+use crate::version::VERSION_STRING;
 use crate::writer::{OutFormat, write, write_header};
 
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
@@ -44,6 +47,17 @@ struct Args {
     /// Topology and diagram files
     #[clap()]
     infiles: Vec<PathBuf>,
+
+    /// Verbosity level
+    #[clap(
+        short,
+        long,
+        default_value = "info",
+        help = "Verbosity level.
+Possible values with increasing amount of output are
+'off', 'error', 'warn', 'info', 'debug', 'trace'."
+    )]
+    loglevel: String,
 }
 
 fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
@@ -96,7 +110,9 @@ fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    env_logger::init();
+    let env = Env::default().filter_or("DYNASTY_LOG", &args.loglevel);
+    env_logger::init_from_env(env);
+    info!("{}", &*VERSION_STRING);
 
     if let Some(filename) = &args.outfile {
         let out = BufWriter::new(File::create(filename)?);
