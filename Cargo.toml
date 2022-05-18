@@ -3,6 +3,13 @@ name = "dynasty"
 version = "0.1.0"
 edition = "2021"
 build = "build.rs"
+description = "Feynman graph topology identification"
+authors = ["Andreas Maier <andreas.martin.maier@desy.de>"]
+license = "GPL-3.0-or-later"
+readme = "Readme.md"
+keywords = ["physics", "graph-algorithms"]
+categories = ["science"]
+# repository = "https://github.com/a-maier/dynasty"
 
 [dependencies]
 ahash = { version = "0.7", features = ["serde"] }
