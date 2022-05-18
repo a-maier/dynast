@@ -218,7 +218,7 @@ impl<'a> Format<'a> for Diagram {
     type Output = FormatDia<'a>;
 
     fn format(&'a self) -> Self::Output {
-        FormatDia(&self)
+        FormatDia(self)
     }
 }
 

@@ -26,7 +26,7 @@ impl<'a> Format<'a> for UnGraph<Momentum, EdgeWeight> {
     type Output = FormatUnGraph<'a>;
 
     fn format(&'a self) -> Self::Output {
-        FormatUnGraph(&self)
+        FormatUnGraph(self)
     }
 }
 
