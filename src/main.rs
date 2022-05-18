@@ -213,7 +213,10 @@ fn main() -> Result<()> {
     info!("{}", &*VERSION_STRING);
 
     if let Some(filename) = &args.outfile {
-        let out = BufWriter::new(File::create(filename)?);
+        let out = File::create(filename).with_context(
+            || format!("Trying to create {filename:?}")
+        )?;
+        let out = BufWriter::new(out);
         write_mappings(args, out)
     } else {
         write_mappings(args, std::io::stdout())
