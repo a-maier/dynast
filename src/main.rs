@@ -6,6 +6,7 @@ mod momentum_mapping;
 mod symbol;
 mod yaml_dias;
 mod yaml_doc_iter;
+mod writer;
 
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
@@ -20,6 +21,7 @@ use crate::graph_util::Format;
 use crate::yaml_dias::{Diagram, NumOrString};
 use crate::yaml_doc_iter::YamlDocIter;
 use crate::mapper::TopMapper;
+use crate::writer::{OutFormat, write, write_header};
 
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 
@@ -30,6 +32,10 @@ struct Args {
     /// Whether to allow mapping on subtopologies
     #[clap(short, long)]
     subtopologies: bool,
+
+    /// Output format
+    #[clap(short, long, arg_enum, default_value = "yaml")]
+    format: OutFormat,
 
     /// Output file
     #[clap(short, long)]
@@ -45,6 +51,10 @@ fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
     if args.subtopologies {
         mapper.add_subgraphs = true;
     }
+
+    write_header(&mut out, args.format).with_context(
+        || "Failed to write output header"
+    )?;
 
     for filename in &args.infiles {
         info!("Reading diagrams from {filename:?}");
@@ -77,7 +87,7 @@ fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
                 let (topname, map) = mapper.map_dia(name.clone(), dia).with_context(
                     || format!("Mapping diagram {name}")
                 )?;
-                writeln!(out, "{name}: [{topname}, {map}]")?;
+                write(&mut out, name, topname, &map, args.format)?;
             }
         }
     }

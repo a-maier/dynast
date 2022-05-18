@@ -21,7 +21,7 @@ type IndexSet<T> = indexmap::IndexSet<T, RandomState>;
 
 #[derive(Clone, Default, Debug, Eq, PartialEq)]
 pub(crate) struct Mapping {
-    map: IndexMap<Symbol, Momentum>,
+    pub(crate) map: IndexMap<Symbol, Momentum>,
 }
 
 impl Display for Mapping {
