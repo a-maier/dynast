@@ -1,10 +1,10 @@
-use std::fmt::Display;
 use std::io::{Error, Write};
 
 use clap::ArgEnum;
 use itertools::Itertools;
 
 use crate::momentum_mapping::Mapping;
+use crate::yaml_dias::NumOrString;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ArgEnum)]
 pub(crate) enum OutFormat {
@@ -14,18 +14,22 @@ pub(crate) enum OutFormat {
 
 pub(crate) fn write(
     mut out: impl Write,
-    name: impl Display,
-    top: impl Display,
+    name: &NumOrString,
+    top: &NumOrString,
     map: &Mapping,
     format: OutFormat,
 ) -> Result<(), Error> {
     use OutFormat::*;
     match format {
-        Form => writeln!(
-            out,
-            "fill topology({name}) = top({top})*replace({});",
-            map.map.iter().map(|(s, p)| format!("{s}, {p}")).join(", ")
-        ),
+        Form => if let NumOrString::Num(dia) = name {
+            writeln!(
+                out,
+                "fill topology({dia}) = top({top})*replace({});",
+                map.map.iter().map(|(s, p)| format!("{s}, {p}")).join(", ")
+            )
+        } else {
+            Ok(())
+        },
         Yaml => writeln!(out, "{name}: [{top}, {map}]")
     }
 }

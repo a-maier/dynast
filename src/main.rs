@@ -200,7 +200,7 @@ fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
                 let (topname, map) = mapper.map_dia(name.clone(), dia).with_context(
                     || format!("Mapping diagram {name}")
                 )?;
-                write(&mut out, name, topname, &map, args.format)?;
+                write(&mut out, &name, &topname, &map, args.format)?;
             }
         }
     }
