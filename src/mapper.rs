@@ -95,3 +95,64 @@ pub(crate) enum TopMapError{
     MapError(#[from] MappingError)
 
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn log_init() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
+
+    #[test]
+    fn map_simple() {
+        use NumOrString::*;
+        log_init();
+
+        let mut mapper = TopMapper::default();
+
+        let propagators = vec![
+            (2, 1, String("l1".to_owned()), Num(0)),
+            (1, 2, String("l1+q".to_owned()), Num(0)),
+        ];
+        let res = mapper.map_dia(Num(1), Diagram { propagators }).unwrap();
+        assert_eq!(res.0, Num(1));
+
+        let propagators = vec![
+            (1, 2, String("-l1".to_owned()), Num(0)),
+            (1, 2, String("l1+q".to_owned()), Num(0)),
+        ];
+        let res = mapper.map_dia(Num(2), Diagram { propagators }).unwrap();
+        assert_eq!(res.0, Num(1));
+
+        let propagators = vec![
+            (1, 1, String("l1".to_owned()), Num(0)),
+        ];
+        let res = mapper.map_dia(Num(3), Diagram { propagators }).unwrap();
+        assert_eq!(res.0, Num(3));
+    }
+
+    #[test]
+    fn map_sub() {
+        use NumOrString::*;
+        log_init();
+
+        let mut mapper = TopMapper::default();
+        mapper.add_subgraphs = true;
+        let propagators = vec![
+            (2, 1, String("l1".to_owned()), Num(0)),
+            (1, 2, String("l1+q".to_owned()), Num(0)),
+        ];
+        let res = mapper.map_dia(Num(1), Diagram { propagators }).unwrap();
+        assert_eq!(res.0, Num(1));
+
+        let propagators = vec![
+            (1, 1, String("-l1".to_owned()), Num(0)),
+        ];
+        let res = mapper.map_dia(Num(2), Diagram { propagators })
+            .map_err(|e| e.to_string())
+            .unwrap();
+        assert_eq!(res.0, Num(1));
+    }
+
+}
