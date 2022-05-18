@@ -4,9 +4,7 @@ use std::fmt::{self, Display};
 use ahash::RandomState;
 use itertools::{izip, join, Itertools};
 use log::{debug, trace};
-use nalgebra::{
-    DMatrix, Dim, Matrix, MatrixSliceMut, RawStorage, U1,
-};
+use nalgebra::{DMatrix, Dim, Matrix, MatrixSliceMut, RawStorage, U1};
 use num_traits::Zero;
 use petgraph::{graph::UnGraph, visit::EdgeRef};
 use thiserror::Error;

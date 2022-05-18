@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use ahash::RandomState;
 use log::{debug, trace};
 use nauty_pet::prelude::*;
-use petgraph::{graph::UnGraph, Graph, Undirected, visit::EdgeRef};
+use petgraph::{graph::UnGraph, visit::EdgeRef, Graph, Undirected};
 use thiserror::Error;
 
 use crate::canon::{contract_edge, into_canon};
@@ -17,7 +17,7 @@ type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(crate) struct TopMapper {
     seen: IndexMap<CanonGraph<Momentum, EdgeWeight, Undirected>, NumOrString>,
-    pub(crate) add_subgraphs: bool
+    pub(crate) add_subgraphs: bool,
 }
 
 impl TopMapper {
@@ -68,14 +68,14 @@ impl TopMapper {
         name: NumOrString,
     ) {
         trace!("Inserting {}", graph.get().format());
-        let contractible_edges = graph.edge_references().enumerate()
-            .filter_map(
-                |(e, edge)| if edge.source() != edge.target() {
+        let contractible_edges =
+            graph.edge_references().enumerate().filter_map(|(e, edge)| {
+                if edge.source() != edge.target() {
                     Some(e)
                 } else {
                     None
                 }
-            );
+            });
         for edge in contractible_edges {
             trace!("Contracting edge {edge} of {}", graph.get().format());
             let subgraph = contract_edge(graph.clone(), edge);
@@ -87,14 +87,12 @@ impl TopMapper {
     }
 }
 
-
 #[derive(Debug, Error)]
-pub(crate) enum TopMapError{
+pub(crate) enum TopMapError {
     #[error("Failed to convert to graph: {0}")]
     ConvError(#[from] ImportError),
     #[error("Failed to map onto topology: {0}")]
-    MapError(#[from] MappingError)
-
+    MapError(#[from] MappingError),
 }
 
 #[cfg(test)]
@@ -126,9 +124,7 @@ mod tests {
         let res = mapper.map_dia(Num(2), Diagram { propagators }).unwrap();
         assert_eq!(res.0, Num(1));
 
-        let propagators = vec![
-            (1, 1, String("l1".to_owned()), Num(0)),
-        ];
+        let propagators = vec![(1, 1, String("l1".to_owned()), Num(0))];
         let res = mapper.map_dia(Num(3), Diagram { propagators }).unwrap();
         assert_eq!(res.0, Num(3));
     }
@@ -147,9 +143,7 @@ mod tests {
         let res = mapper.map_dia(Num(1), Diagram { propagators }).unwrap();
         assert_eq!(res.0, Num(1));
 
-        let propagators = vec![
-            (1, 1, String("-l1".to_owned()), Num(0)),
-        ];
+        let propagators = vec![(1, 1, String("-l1".to_owned()), Num(0))];
         let res = mapper.map_dia(Num(2), Diagram { propagators }).unwrap();
         assert_eq!(res.0, Num(1));
     }
@@ -191,5 +185,4 @@ mod tests {
         let res = mapper.map_dia(Num(3), Diagram { propagators }).unwrap();
         assert_eq!(res.0, Num(1));
     }
-
 }

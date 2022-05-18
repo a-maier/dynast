@@ -21,16 +21,18 @@ pub(crate) fn write(
 ) -> Result<(), Error> {
     use OutFormat::*;
     match format {
-        Form => if let NumOrString::Num(dia) = name {
-            writeln!(
-                out,
-                "fill topology({dia}) = top({top})*replace({});",
-                map.map.iter().map(|(s, p)| format!("{s}, {p}")).join(", ")
-            )
-        } else {
-            Ok(())
-        },
-        Yaml => writeln!(out, "{name}: [{top}, {map}]")
+        Form => {
+            if let NumOrString::Num(dia) = name {
+                writeln!(
+                    out,
+                    "fill topology({dia}) = top({top})*replace({});",
+                    map.map.iter().map(|(s, p)| format!("{s}, {p}")).join(", ")
+                )
+            } else {
+                Ok(())
+            }
+        }
+        Yaml => writeln!(out, "{name}: [{top}, {map}]"),
     }
 }
 
@@ -45,6 +47,6 @@ pub(crate) fn write_header(
             "cf top, replace;
 table,sparse topology(1);"
         ),
-        Yaml => Ok(())
+        Yaml => Ok(()),
     }
 }

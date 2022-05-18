@@ -1,16 +1,15 @@
 use std::borrow::Cow;
-use std::convert::identity;
 use std::cmp::Ordering;
+use std::convert::identity;
 use std::fmt::{self, Display};
 use std::ops::AddAssign;
 
 use ahash::AHashSet;
 use num_traits::Zero;
 use petgraph::{
-    EdgeType,
     graph::{IndexType, UnGraph},
-    Graph,
     visit::{EdgeRef, NodeIndexable},
+    EdgeType, Graph,
 };
 
 use crate::momentum::Momentum;
@@ -30,25 +29,34 @@ impl<'a> Format<'a> for UnGraph<Momentum, EdgeWeight> {
     }
 }
 
-pub(crate) struct FormatUnGraph<'a> (
-    &'a UnGraph<Momentum, EdgeWeight>
-);
+pub(crate) struct FormatUnGraph<'a>(&'a UnGraph<Momentum, EdgeWeight>);
 
 impl<'a> Display for FormatUnGraph<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Graph {{
-   external momenta: {{")?;
+        write!(
+            f,
+            "Graph {{
+   external momenta: {{"
+        )?;
         for (n, p) in self.0.node_weights().enumerate() {
             if !p.is_zero() {
                 write!(f, "{n}: {p}, ")?;
             }
         }
-        writeln!(f, "}},
-   propagators: [")?;
+        writeln!(
+            f,
+            "}},
+   propagators: ["
+        )?;
         for e in self.0.edge_references() {
             let from = self.0.to_index(e.source());
             let to = self.0.to_index(e.target());
-            writeln!(f, "      [({from}, {to}), {}, {}],", e.weight().p, e.weight().m)?
+            writeln!(
+                f,
+                "      [({from}, {to}), {}, {}],",
+                e.weight().p,
+                e.weight().m
+            )?
         }
         writeln!(f, "   ],\n}}")
     }
@@ -142,7 +150,7 @@ where
 
 pub(crate) fn contract_graph_edge<N, E, Ty, Ix>(
     g: Graph<N, E, Ty, Ix>,
-    idx: usize
+    idx: usize,
 ) -> Graph<N, E, Ty, Ix>
 where
     N: AddAssign,
@@ -160,7 +168,7 @@ where
                 match removed.cmp(vx) {
                     Ordering::Less => *vx -= 1,
                     Ordering::Equal => *vx = merged,
-                    Ordering::Greater => { }
+                    Ordering::Greater => {}
                 }
             }
         }
@@ -185,7 +193,7 @@ where
             g = contract_graph_edge(g, e);
         } else {
             seen.insert(p.into_owned());
-            e +=1;
+            e += 1;
         }
     }
     g
@@ -202,6 +210,6 @@ fn minmax<T: Ord>(s: T, t: T) -> (T, T) {
 fn norm_sign(p: &Momentum) -> Cow<'_, Momentum> {
     match p.terms().first() {
         Some(t) if t.coeff() < 0 => Cow::Owned(-p.clone()),
-        _ => Cow::Borrowed(p)
+        _ => Cow::Borrowed(p),
     }
 }

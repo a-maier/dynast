@@ -13,7 +13,6 @@ lazy_static! {
         env!("CARGO_PKG_VERSION_MINOR").parse().unwrap();
     pub static ref VERSION_PATCH: u32 =
         env!("CARGO_PKG_VERSION_PATCH").parse().unwrap();
-
     pub static ref VERSION_STRING: String = {
         if let (Some(rev), Some(branch)) = (GIT_REV, GIT_BRANCH) {
             format!("{NAME} {VERSION} rev {rev} ({branch})")

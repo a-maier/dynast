@@ -222,21 +222,21 @@ impl<'a> Format<'a> for Diagram {
     }
 }
 
-pub(crate) struct FormatDia<'a> (
-    &'a Diagram
-);
+pub(crate) struct FormatDia<'a>(&'a Diagram);
 
 impl<'a> Display for FormatDia<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Graph {{
-   [")?;
+        writeln!(
+            f,
+            "Graph {{
+   ["
+        )?;
         for (from, to, p, m) in &self.0.propagators {
             writeln!(f, "      [({from}, {to}), {p}, {m}],")?
         }
         writeln!(f, "   ],\n}}")
     }
 }
-
 
 #[cfg(test)]
 mod tests {

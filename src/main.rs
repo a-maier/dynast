@@ -103,10 +103,10 @@ mod mapper;
 mod momentum;
 mod momentum_mapping;
 mod symbol;
+mod version;
+mod writer;
 mod yaml_dias;
 mod yaml_doc_iter;
-mod writer;
-mod version;
 
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
@@ -119,11 +119,11 @@ use env_logger::Env;
 use log::{debug, info, trace};
 
 use crate::graph_util::Format;
-use crate::yaml_dias::{Diagram, NumOrString};
-use crate::yaml_doc_iter::YamlDocIter;
 use crate::mapper::TopMapper;
 use crate::version::VERSION_STRING;
-use crate::writer::{OutFormat, write, write_header};
+use crate::writer::{write, write_header, OutFormat};
+use crate::yaml_dias::{Diagram, NumOrString};
+use crate::yaml_doc_iter::YamlDocIter;
 
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 
@@ -165,9 +165,8 @@ fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
         mapper.add_subgraphs = true;
     }
 
-    write_header(&mut out, args.format).with_context(
-        || "Failed to write output header"
-    )?;
+    write_header(&mut out, args.format)
+        .with_context(|| "Failed to write output header")?;
 
     for filename in &args.infiles {
         info!("Reading diagrams from {filename:?}");
@@ -197,9 +196,9 @@ fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
             };
             for (name, dia) in dias {
                 debug!("Read {name}: {}", dia.format());
-                let (topname, map) = mapper.map_dia(name.clone(), dia).with_context(
-                    || format!("Mapping diagram {name}")
-                )?;
+                let (topname, map) = mapper
+                    .map_dia(name.clone(), dia)
+                    .with_context(|| format!("Mapping diagram {name}"))?;
                 write(&mut out, &name, &topname, &map, args.format)?;
             }
         }

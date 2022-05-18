@@ -1,12 +1,12 @@
 use derivative::Derivative;
 use log::trace;
 use nauty_pet::prelude::*;
-use petgraph::{
-    graph::UnGraph,
-    Undirected,
-};
+use petgraph::{graph::UnGraph, Undirected};
 
-use crate::graph_util::{Format, contract_graph_edge, from_nodes_edges, transform_nodes, into_nodes_edges};
+use crate::graph_util::{
+    contract_graph_edge, from_nodes_edges, into_nodes_edges, transform_nodes,
+    Format,
+};
 use crate::momentum::Momentum;
 use crate::yaml_dias::EdgeWeight;
 
@@ -80,8 +80,7 @@ fn relabel_nodes(
 
 pub(crate) fn contract_edge(
     g: CanonGraph<Momentum, EdgeWeight, Undirected>,
-    idx: usize
-) -> CanonGraph<Momentum, EdgeWeight, Undirected>
-{
+    idx: usize,
+) -> CanonGraph<Momentum, EdgeWeight, Undirected> {
     into_canon(contract_graph_edge(g.into(), idx))
 }
