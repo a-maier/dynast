@@ -7,7 +7,7 @@ use petgraph::{graph::UnGraph, Graph, Undirected, visit::EdgeRef};
 use thiserror::Error;
 
 use crate::canon::{contract_edge, into_canon};
-use crate::graph_util::{Format};
+use crate::graph_util::{contract_duplicate, Format};
 use crate::momentum::Momentum;
 use crate::momentum_mapping::{Mapping, MappingError};
 use crate::yaml_dias::{Diagram, EdgeWeight, ImportError, NumOrString};
@@ -43,6 +43,7 @@ impl TopMapper {
         graph: UnGraph<Momentum, EdgeWeight>,
     ) -> Result<(NumOrString, Mapping), TopMapError> {
         debug!("Mapping graph {name}: {}", graph.format());
+        let graph = contract_duplicate(graph);
         let canon = into_canon(graph);
 
         if let Some((target, topname)) = self.seen.get_key_value(&canon) {

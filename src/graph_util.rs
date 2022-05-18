@@ -1,8 +1,10 @@
+use std::borrow::Cow;
 use std::convert::identity;
 use std::cmp::Ordering;
 use std::fmt::{self, Display};
 use std::ops::AddAssign;
 
+use ahash::AHashSet;
 use num_traits::Zero;
 use petgraph::{
     EdgeType,
@@ -166,10 +168,40 @@ where
     from_nodes_edges(nodes, edges)
 }
 
+pub(crate) fn contract_duplicate<N, Ty, Ix>(
+    mut g: Graph<N, EdgeWeight, Ty, Ix>,
+) -> Graph<N, EdgeWeight, Ty, Ix>
+where
+    N: AddAssign,
+    Ty: EdgeType,
+    Ix: IndexType,
+{
+    let mut seen = AHashSet::new();
+    let mut e = 0;
+    while e < g.edge_count() {
+        let idx = petgraph::visit::EdgeIndexable::from_index(&g, e);
+        let p = norm_sign(&g.edge_weight(idx).unwrap().p);
+        if seen.contains(p.as_ref()) {
+            g = contract_graph_edge(g, e);
+        } else {
+            seen.insert(p.into_owned());
+            e +=1;
+        }
+    }
+    g
+}
+
 fn minmax<T: Ord>(s: T, t: T) -> (T, T) {
     if s < t {
         (s, t)
     } else {
         (t, s)
+    }
+}
+
+fn norm_sign(p: &Momentum) -> Cow<'_, Momentum> {
+    match p.terms().first() {
+        Some(t) if t.coeff() < 0 => Cow::Owned(-p.clone()),
+        _ => Cow::Borrowed(p)
     }
 }
