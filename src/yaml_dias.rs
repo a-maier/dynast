@@ -228,7 +228,7 @@ pub(crate) struct FormatDia<'a> (
 
 impl<'a> Display for FormatDia<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Graph {{
+        writeln!(f, "Graph {{
    [")?;
         for (from, to, p, m) in &self.0.propagators {
             writeln!(f, "      [({from}, {to}), {p}, {m}],")?

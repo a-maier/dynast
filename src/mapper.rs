@@ -76,7 +76,7 @@ impl TopMapper {
                 }
             );
         for edge in contractible_edges {
-            trace!("Contracting edge {edge}");
+            trace!("Contracting edge {edge} of {}", graph.get().format());
             let subgraph = contract_edge(graph.clone(), edge);
             if !self.seen.contains_key(&subgraph) {
                 self.insert_subgraphs(subgraph, name.clone())
