@@ -26,7 +26,7 @@ use crate::symbol::Symbol;
     Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize,
 )]
 #[serde(transparent)]
-pub(crate) struct Diagram {
+pub struct Diagram {
     pub(crate) denominators: Vec<Denom>,
 }
 
@@ -34,7 +34,7 @@ pub(crate) struct Diagram {
     Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize,
 )]
 #[serde(untagged)]
-pub(crate) enum Denom {
+pub enum Denom {
     Prop(u32, u32, NumOrString, NumOrString),
     Sp(NumOrString, NumOrString),
 }
@@ -43,7 +43,7 @@ pub(crate) enum Denom {
     Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize,
 )]
 #[serde(untagged)]
-pub(crate) enum NumOrString {
+pub enum NumOrString {
     Num(i64),
     String(String),
 }
@@ -81,7 +81,8 @@ impl TryFrom<NumOrString> for Momentum {
 }
 
 #[derive(Debug, Error)]
-pub(crate) enum ImportError {
+#[non_exhaustive]
+pub enum ImportError {
     #[error("Failed to parse momentum: {0}")]
     MomentumParseError(String),
 }
