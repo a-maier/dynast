@@ -18,7 +18,7 @@ type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 type IndexSet<T> = indexmap::IndexSet<T, RandomState>;
 
 #[derive(Clone, Default, Debug, Eq, PartialEq)]
-pub(crate) struct Mapping {
+pub struct Mapping {
     pub(crate) map: IndexMap<Symbol, Momentum>,
 }
 
@@ -32,7 +32,8 @@ impl Display for Mapping {
 }
 
 #[derive(Debug, Error)]
-pub(crate) enum MappingError {
+#[non_exhaustive]
+pub enum MappingError {
     #[error("Sets of loop momenta differ: {{{}}} != {{{}}}", join(.0, ", "), join(.1, ", "))]
     MomentumMismatch(IndexSet<Symbol>, IndexSet<Symbol>),
 }
@@ -140,6 +141,14 @@ impl Mapping {
             map.insert(*lhs, rhs);
         }
         Self { map }
+    }
+}
+
+impl IntoIterator for Mapping {
+    type Item = (Symbol, Momentum);
+    type IntoIter = indexmap::map::IntoIter<Symbol, Momentum>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.map.into_iter()
     }
 }
 

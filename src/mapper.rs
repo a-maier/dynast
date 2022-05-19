@@ -15,17 +15,17 @@ use crate::yaml_dias::{Diagram, EdgeWeight, ImportError, NumOrString};
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub(crate) struct TopMapper {
+pub struct TopMapper {
     seen: IndexMap<CanonGraph<Momentum, EdgeWeight, Undirected>, NumOrString>,
-    pub(crate) add_subgraphs: bool,
+    pub add_subgraphs: bool,
 }
 
 impl TopMapper {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self::default()
     }
 
-    pub(crate) fn map_dia(
+    pub fn map_dia(
         &mut self,
         name: NumOrString,
         dia: Diagram,
@@ -88,7 +88,8 @@ impl TopMapper {
 }
 
 #[derive(Debug, Error)]
-pub(crate) enum TopMapError {
+#[non_exhaustive]
+pub enum TopMapError {
     #[error("Failed to convert to graph: {0}")]
     ConvError(#[from] ImportError),
     #[error("Failed to map onto topology: {0}")]
