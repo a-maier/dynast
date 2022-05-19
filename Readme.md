@@ -52,7 +52,13 @@ diagram1:
 ```
 `from` and `to` are non-negative integer vertex labels designating
 the start and end of the propagator line. `p` is the propagator
-momentum (e.g. `l1 + q`) and `m` its mass.
+momentum (e.g. `l1 + q`) and `m` its mass. It is allowed to omit
+both `from` and `to` and the same time to denote a scalar product
+that is not associated with a graph edge. `dynasty` will ignore
+such scalar products.
+
+The document separator `---` is optional but recommended for large
+input files to save memory.
 
 dynasty includes a
 [QGRAF](http://cfif.ist.utl.pt/~paulo/qgraf.html) style file
