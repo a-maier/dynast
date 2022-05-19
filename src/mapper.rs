@@ -98,6 +98,7 @@ pub(crate) enum TopMapError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::yaml_dias::Denom::Prop;
 
     fn log_init() {
         let _ = env_logger::builder().is_test(true).try_init();
@@ -106,25 +107,26 @@ mod tests {
     #[test]
     fn map_simple() {
         use NumOrString::*;
+
         log_init();
 
         let mut mapper = TopMapper::default();
 
         let propagators = vec![
-            (2, 1, String("l1".to_owned()), Num(0)),
-            (1, 2, String("l1+q".to_owned()), Num(0)),
+            Prop(2, 1, String("l1".to_owned()), Num(0)),
+            Prop(1, 2, String("l1+q".to_owned()), Num(0)),
         ];
         let res = mapper.map_dia(Num(1), Diagram { propagators }).unwrap();
         assert_eq!(res.0, Num(1));
 
         let propagators = vec![
-            (1, 2, String("-l1".to_owned()), Num(0)),
-            (1, 2, String("l1+q".to_owned()), Num(0)),
+            Prop(1, 2, String("-l1".to_owned()), Num(0)),
+            Prop(1, 2, String("l1+q".to_owned()), Num(0)),
         ];
         let res = mapper.map_dia(Num(2), Diagram { propagators }).unwrap();
         assert_eq!(res.0, Num(1));
 
-        let propagators = vec![(1, 1, String("l1".to_owned()), Num(0))];
+        let propagators = vec![Prop(1, 1, String("l1".to_owned()), Num(0))];
         let res = mapper.map_dia(Num(3), Diagram { propagators }).unwrap();
         assert_eq!(res.0, Num(3));
     }
@@ -137,13 +139,13 @@ mod tests {
         let mut mapper = TopMapper::default();
         mapper.add_subgraphs = true;
         let propagators = vec![
-            (2, 1, String("l1".to_owned()), Num(0)),
-            (1, 2, String("l1+q".to_owned()), Num(0)),
+            Prop(2, 1, String("l1".to_owned()), Num(0)),
+            Prop(1, 2, String("l1+q".to_owned()), Num(0)),
         ];
         let res = mapper.map_dia(Num(1), Diagram { propagators }).unwrap();
         assert_eq!(res.0, Num(1));
 
-        let propagators = vec![(1, 1, String("-l1".to_owned()), Num(0))];
+        let propagators = vec![Prop(1, 1, String("-l1".to_owned()), Num(0))];
         let res = mapper.map_dia(Num(2), Diagram { propagators }).unwrap();
         assert_eq!(res.0, Num(1));
     }
@@ -156,31 +158,31 @@ mod tests {
         let mut mapper = TopMapper::default();
         mapper.add_subgraphs = true;
         let propagators = vec![
-            (1, 2, String("l1+q".to_owned()), Num(0)),
-            (2, 3, String("l2+q".to_owned()), Num(0)),
-            (3, 4, String("l2".to_owned()), Num(0)),
-            (4, 1, String("l1".to_owned()), Num(0)),
-            (2, 4, String("l1-l2".to_owned()), Num(0)),
+            Prop(1, 2, String("l1+q".to_owned()), Num(0)),
+            Prop(2, 3, String("l2+q".to_owned()), Num(0)),
+            Prop(3, 4, String("l2".to_owned()), Num(0)),
+            Prop(4, 1, String("l1".to_owned()), Num(0)),
+            Prop(2, 4, String("l1-l2".to_owned()), Num(0)),
         ];
         let res = mapper.map_dia(Num(1), Diagram { propagators }).unwrap();
         assert_eq!(res.0, Num(1));
         mapper.add_subgraphs = false;
 
         let propagators = vec![
-            (1, 2, String("l1+q".to_owned()), Num(0)),
-            (1, 3, String("l2".to_owned()), Num(0)),
-            (3, 1, String("l1+l2".to_owned()), Num(0)),
-            (2, 3, String("l1".to_owned()), Num(0)),
+            Prop(1, 2, String("l1+q".to_owned()), Num(0)),
+            Prop(1, 3, String("l2".to_owned()), Num(0)),
+            Prop(3, 1, String("l1+l2".to_owned()), Num(0)),
+            Prop(2, 3, String("l1".to_owned()), Num(0)),
         ];
         let res = mapper.map_dia(Num(2), Diagram { propagators }).unwrap();
         assert_eq!(res.0, Num(1));
 
         let propagators = vec![
-            (1, 2, String("l1+q".to_owned()), Num(0)),
-            (2, 3, String("l1".to_owned()), Num(0)),
-            (3, 4, String("l1+l2".to_owned()), Num(0)),
-            (4, 3, String("l2".to_owned()), Num(0)),
-            (4, 1, String("l1".to_owned()), Num(0)),
+            Prop(1, 2, String("l1+q".to_owned()), Num(0)),
+            Prop(2, 3, String("l1".to_owned()), Num(0)),
+            Prop(3, 4, String("l1+l2".to_owned()), Num(0)),
+            Prop(4, 3, String("l2".to_owned()), Num(0)),
+            Prop(4, 1, String("l1".to_owned()), Num(0)),
         ];
         let res = mapper.map_dia(Num(3), Diagram { propagators }).unwrap();
         assert_eq!(res.0, Num(1));

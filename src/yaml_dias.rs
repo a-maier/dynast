@@ -27,7 +27,16 @@ use crate::symbol::Symbol;
 )]
 #[serde(transparent)]
 pub(crate) struct Diagram {
-    pub(crate) propagators: Vec<(u32, u32, NumOrString, NumOrString)>,
+    pub(crate) propagators: Vec<Denom>,
+}
+
+#[derive(
+    Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize,
+)]
+#[serde(untagged)]
+pub(crate) enum Denom {
+    Prop(u32, u32, NumOrString, NumOrString),
+    Sp(NumOrString, NumOrString),
 }
 
 #[derive(
@@ -90,10 +99,20 @@ impl TryFrom<Diagram> for UnGraph<Momentum, EdgeWeight> {
 
     fn try_from(dia: Diagram) -> Result<Self, Self::Error> {
         use petgraph::visit::NodeIndexable;
+        use Denom::*;
 
-        let nprops = dia.propagators.len();
-        let nvertices = dia
-            .propagators
+        let propagators = Vec::from_iter(
+            dia.propagators.into_iter().filter_map(
+                |d| if let Prop(v1, v2, p, m) = d {
+                    Some((v1, v2, p, m))
+                } else {
+                    None
+                }
+            )
+        );
+
+        let nprops = propagators.len();
+        let nvertices = propagators
             .iter()
             .map(|(from, to, _, _)| max(*from, *to))
             .max()
@@ -104,7 +123,7 @@ impl TryFrom<Diagram> for UnGraph<Momentum, EdgeWeight> {
             res.add_node(Momentum::zero());
         }
 
-        for (from, to, p, m) in dia.propagators {
+        for (from, to, p, m) in propagators {
             let from = res.from_index(from as usize);
             let to = res.from_index(to as usize);
             let p = p.try_into()?;
@@ -226,13 +245,17 @@ pub(crate) struct FormatDia<'a>(&'a Diagram);
 
 impl<'a> Display for FormatDia<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Denom::*;
         writeln!(
             f,
             "Graph {{
    ["
         )?;
-        for (from, to, p, m) in &self.0.propagators {
-            writeln!(f, "      [({from}, {to}), {p}, {m}],")?
+        for den in &self.0.propagators {
+            match den {
+                Prop(from, to, p, m) =>  writeln!(f, "      [({from}, {to}), {p}, {m}],")?,
+                Sp(p, m) =>  writeln!(f, "      [{p}, {m}],")?,
+            }
         }
         writeln!(f, "   ],\n}}")
     }
