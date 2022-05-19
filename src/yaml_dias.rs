@@ -27,7 +27,7 @@ use crate::symbol::Symbol;
 )]
 #[serde(transparent)]
 pub(crate) struct Diagram {
-    pub(crate) propagators: Vec<Denom>,
+    pub(crate) denominators: Vec<Denom>,
 }
 
 #[derive(
@@ -102,7 +102,7 @@ impl TryFrom<Diagram> for UnGraph<Momentum, EdgeWeight> {
         use Denom::*;
 
         let propagators = Vec::from_iter(
-            dia.propagators.into_iter().filter_map(
+            dia.denominators.into_iter().filter_map(
                 |d| if let Prop(v1, v2, p, m) = d {
                     Some((v1, v2, p, m))
                 } else {
@@ -251,7 +251,7 @@ impl<'a> Display for FormatDia<'a> {
             "Graph {{
    ["
         )?;
-        for den in &self.0.propagators {
+        for den in &self.0.denominators {
             match den {
                 Prop(from, to, p, m) =>  writeln!(f, "      [({from}, {to}), {p}, {m}],")?,
                 Sp(p, m) =>  writeln!(f, "      [{p}, {m}],")?,
