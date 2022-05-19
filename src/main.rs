@@ -50,7 +50,9 @@
 //! ```
 //! `from` and `to` are non-negative integer vertex labels designating
 //! the start and end of the propagator line. `p` is the propagator
-//! momentum (e.g. `l1 + q`) and `m` its mass.
+//! momentum (e.g. `l1 + q`) and `m` its mass. The document separator
+//! `---` is optional but recommended for large input files to save
+//! memory.
 //!
 //! dynasty includes a
 //! [QGRAF](http://cfif.ist.utl.pt/~paulo/qgraf.html) style file
