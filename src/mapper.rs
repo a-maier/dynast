@@ -117,18 +117,18 @@ mod tests {
             Prop(2, 1, String("l1".to_owned()), Num(0)),
             Prop(1, 2, String("l1+q".to_owned()), Num(0)),
         ];
-        let res = mapper.map_dia(Num(1), Diagram { denominators }).unwrap();
+        let res = mapper.map_dia(Num(1), Diagram::new(denominators)).unwrap();
         assert_eq!(res.0, Num(1));
 
         let denominators = vec![
             Prop(1, 2, String("-l1".to_owned()), Num(0)),
             Prop(1, 2, String("l1+q".to_owned()), Num(0)),
         ];
-        let res = mapper.map_dia(Num(2), Diagram { denominators }).unwrap();
+        let res = mapper.map_dia(Num(2), Diagram::new(denominators)).unwrap();
         assert_eq!(res.0, Num(1));
 
         let denominators = vec![Prop(1, 1, String("l1".to_owned()), Num(0))];
-        let res = mapper.map_dia(Num(3), Diagram { denominators }).unwrap();
+        let res = mapper.map_dia(Num(3), Diagram::new(denominators)).unwrap();
         assert_eq!(res.0, Num(3));
     }
 
@@ -143,11 +143,11 @@ mod tests {
             Prop(2, 1, String("l1".to_owned()), Num(0)),
             Prop(1, 2, String("l1+q".to_owned()), Num(0)),
         ];
-        let res = mapper.map_dia(Num(1), Diagram { denominators }).unwrap();
+        let res = mapper.map_dia(Num(1), Diagram::new(denominators)).unwrap();
         assert_eq!(res.0, Num(1));
 
         let denominators = vec![Prop(1, 1, String("-l1".to_owned()), Num(0))];
-        let res = mapper.map_dia(Num(2), Diagram { denominators }).unwrap();
+        let res = mapper.map_dia(Num(2), Diagram::new(denominators)).unwrap();
         assert_eq!(res.0, Num(1));
     }
 
@@ -165,7 +165,7 @@ mod tests {
             Prop(4, 1, String("l1".to_owned()), Num(0)),
             Prop(2, 4, String("l1-l2".to_owned()), Num(0)),
         ];
-        let res = mapper.map_dia(Num(1), Diagram { denominators }).unwrap();
+        let res = mapper.map_dia(Num(1), Diagram::new(denominators)).unwrap();
         assert_eq!(res.0, Num(1));
         mapper.add_subgraphs = false;
 
@@ -175,7 +175,7 @@ mod tests {
             Prop(3, 1, String("l1+l2".to_owned()), Num(0)),
             Prop(2, 3, String("l1".to_owned()), Num(0)),
         ];
-        let res = mapper.map_dia(Num(2), Diagram { denominators }).unwrap();
+        let res = mapper.map_dia(Num(2), Diagram::new(denominators)).unwrap();
         assert_eq!(res.0, Num(1));
 
         let denominators = vec![
@@ -185,7 +185,7 @@ mod tests {
             Prop(4, 3, String("l2".to_owned()), Num(0)),
             Prop(4, 1, String("l1".to_owned()), Num(0)),
         ];
-        let res = mapper.map_dia(Num(3), Diagram { denominators }).unwrap();
+        let res = mapper.map_dia(Num(3), Diagram::new(denominators)).unwrap();
         assert_eq!(res.0, Num(1));
     }
 }

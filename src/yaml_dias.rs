@@ -27,7 +27,17 @@ use crate::symbol::Symbol;
 )]
 #[serde(transparent)]
 pub struct Diagram {
-    pub(crate) denominators: Vec<Denom>,
+    denominators: Vec<Denom>,
+}
+
+impl Diagram {
+    pub fn into_denominators(self) -> Vec<Denom> {
+        self.denominators
+    }
+
+    pub fn new(denominators: Vec<Denom>) -> Self {
+        Self { denominators }
+    }
 }
 
 #[derive(
@@ -103,7 +113,7 @@ impl TryFrom<Diagram> for UnGraph<Momentum, EdgeWeight> {
         use Denom::*;
 
         let propagators = Vec::from_iter(
-            dia.denominators.into_iter().filter_map(
+            dia.into_denominators().into_iter().filter_map(
                 |d| if let Prop(v1, v2, p, m) = d {
                     Some((v1, v2, p, m))
                 } else {
