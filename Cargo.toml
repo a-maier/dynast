@@ -1,6 +1,6 @@
 [package]
 name = "dynasty"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 build = "build.rs"
 description = "Feynman graph topology identification"
@@ -23,7 +23,7 @@ lazy_static = "1.4"
 log = "0.4"
 memmap = "0.7"
 nalgebra = "0.31"
-nauty-pet = "0.6"
+nauty-pet = { version = "0.7", features = ["stable"] }
 nom = "7"
 num-rational = { version = "0.4", features = ["serde"] }
 num-traits = "0.2"
