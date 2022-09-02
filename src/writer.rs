@@ -27,7 +27,7 @@ pub(crate) fn write(
                 writeln!(
                     out,
                     "fill topology({dia}) = top({top})*replace({});",
-                    map.map.iter().map(|(s, p)| format!("{s}, {p}")).join(", ")
+                    map.0.iter().map(|(s, p)| format!("{s}, {p}")).join(", ")
                 )
             } else {
                 Ok(())

@@ -18,13 +18,13 @@ type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 type IndexSet<T> = indexmap::IndexSet<T, RandomState>;
 
 #[derive(Clone, Default, Debug, Eq, PartialEq)]
-pub struct Mapping {
-    pub(crate) map: IndexMap<Symbol, Momentum>,
-}
+pub struct Mapping (
+    pub IndexMap<Symbol, Momentum>
+);
 
 impl Display for Mapping {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut sorted = Vec::from_iter(self.map.iter());
+        let mut sorted = Vec::from_iter(self.0.iter());
         sorted.sort();
         let output = sorted.iter().map(|(s, p)| format!("{s}: {p}")).join(", ");
         write!(f, "{{{output}}}")
@@ -45,7 +45,7 @@ impl Mapping {
             .into_iter()
             .map(|p| (p, p.into()))
             .collect();
-        Self { map }
+        Self ( map )
     }
 
     pub(crate) fn new(
@@ -140,7 +140,7 @@ impl Mapping {
             }
             map.insert(*lhs, rhs);
         }
-        Self { map }
+        Self ( map )
     }
 }
 
@@ -148,7 +148,7 @@ impl IntoIterator for Mapping {
     type Item = (Symbol, Momentum);
     type IntoIter = indexmap::map::IntoIter<Symbol, Momentum>;
     fn into_iter(self) -> Self::IntoIter {
-        self.map.into_iter()
+        self.0.into_iter()
     }
 }
 
