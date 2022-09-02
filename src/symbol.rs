@@ -59,7 +59,7 @@ pub struct Symbol {
 }
 
 impl Symbol {
-    pub(crate) fn new_unchecked(name: &str) -> Self {
+    pub fn new_unchecked(name: &str) -> Self {
         if let Some(idx) = SYMBOL_REGISTER.read().unwrap().try_idx(name) {
             return Self { idx };
         }
@@ -67,7 +67,7 @@ impl Symbol {
         Self { idx }
     }
 
-    pub(crate) fn name(&self) -> String {
+    pub fn name(&self) -> String {
         SYMBOL_REGISTER.read().unwrap().name(self.idx).to_owned()
     }
 }
