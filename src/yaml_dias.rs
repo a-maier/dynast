@@ -67,6 +67,18 @@ impl From<NumOrString> for String {
     }
 }
 
+impl From<String> for NumOrString {
+    fn from(source: String) -> Self {
+        Self::String(source)
+    }
+}
+
+impl From<i64> for NumOrString {
+    fn from(source: i64) -> Self {
+        Self::Num(source)
+    }
+}
+
 impl Display for NumOrString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

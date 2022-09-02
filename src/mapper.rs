@@ -37,7 +37,7 @@ impl TopMapper {
     }
 
     // TODO: borrow checker complains if we return a `&NumOrString`
-    pub(crate) fn map_graph(
+    pub fn map_graph(
         &mut self,
         name: NumOrString,
         graph: UnGraph<Momentum, EdgeWeight>,
