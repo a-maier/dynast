@@ -150,15 +150,15 @@ impl TryFrom<Diagram> for UnGraph<Momentum, EdgeWeight> {
 
 #[derive(Clone, Debug, Default, Derivative)]
 #[derivative(Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub(crate) struct EdgeWeight {
+pub struct EdgeWeight {
     #[derivative(
         PartialEq = "ignore",
         PartialOrd = "ignore",
         Ord = "ignore",
         Hash = "ignore"
     )]
-    pub(crate) p: Momentum,
-    pub(crate) m: String,
+    pub p: Momentum,
+    pub m: String,
 }
 
 fn momentum(input: &str) -> IResult<&str, Momentum> {
