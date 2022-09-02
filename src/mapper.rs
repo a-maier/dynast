@@ -36,6 +36,16 @@ impl TopMapper {
         self.map_graph(name, graph)
     }
 
+    pub fn try_map_dia(
+        &self,
+        dia: Diagram,
+    ) -> Result<Option<(NumOrString, Mapping)>, TopMapError> {
+        debug!("Trying to map diagram {}", dia.format());
+        let graph = Graph::try_from(dia)?;
+
+        self.try_map_graph(graph)
+    }
+
     // TODO: borrow checker complains if we return a `&NumOrString`
     pub fn map_graph(
         &mut self,
@@ -60,6 +70,23 @@ impl TopMapper {
             self.seen.insert(canon, name.clone());
         }
         Ok((name, map))
+    }
+
+
+    pub fn try_map_graph(
+        &self,
+        graph: UnGraph<Momentum, EdgeWeight>
+    ) -> Result<Option<(NumOrString, Mapping)>, TopMapError> {
+        debug!("Trying to map graph {}", graph.format());
+        let graph = contract_duplicate(graph);
+        let canon = into_canon(graph);
+        if let Some((target, topname)) = self.seen.get_key_value(&canon) {
+            debug!("graph is {topname}");
+            let map = Mapping::new(canon.get(), target.get())?;
+            return Ok(Some((topname.clone(), map)));
+        } else {
+            Ok(None)
+        }
     }
 
     fn insert_subgraphs(
