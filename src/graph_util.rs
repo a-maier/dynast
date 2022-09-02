@@ -62,7 +62,7 @@ impl<'a> Display for FormatUnGraph<'a> {
     }
 }
 
-pub(crate) fn into_nodes_edges<N, E, Ty, Ix>(
+pub fn into_nodes_edges<N, E, Ty, Ix>(
     g: Graph<N, E, Ty, Ix>,
 ) -> (Vec<N>, Vec<(usize, usize, E)>)
 where
@@ -148,7 +148,7 @@ where
     transform_nodes_edges(g, node_transform, identity)
 }
 
-pub(crate) fn contract_graph_edge<N, E, Ty, Ix>(
+pub fn contract_graph_edge<N, E, Ty, Ix>(
     g: Graph<N, E, Ty, Ix>,
     idx: usize,
 ) -> Graph<N, E, Ty, Ix>
