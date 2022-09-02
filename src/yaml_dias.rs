@@ -252,7 +252,7 @@ impl<'a> Format<'a> for Diagram {
     }
 }
 
-pub(crate) struct FormatDia<'a>(&'a Diagram);
+pub struct FormatDia<'a>(&'a Diagram);
 
 impl<'a> Display for FormatDia<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -15,7 +15,7 @@ use petgraph::{
 use crate::momentum::Momentum;
 use crate::yaml_dias::EdgeWeight;
 
-pub(crate) trait Format<'a> {
+pub trait Format<'a> {
     type Output: Display;
 
     fn format(&'a self) -> Self::Output;
@@ -29,7 +29,7 @@ impl<'a> Format<'a> for UnGraph<Momentum, EdgeWeight> {
     }
 }
 
-pub(crate) struct FormatUnGraph<'a>(&'a UnGraph<Momentum, EdgeWeight>);
+pub struct FormatUnGraph<'a>(&'a UnGraph<Momentum, EdgeWeight>);
 
 impl<'a> Display for FormatUnGraph<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
