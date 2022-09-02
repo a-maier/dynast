@@ -23,7 +23,7 @@ use crate::momentum::{Momentum, Term};
 use crate::symbol::Symbol;
 
 #[derive(
-    Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize,
+    Clone, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize,
 )]
 #[serde(transparent)]
 pub struct Diagram {
