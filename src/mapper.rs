@@ -14,9 +14,11 @@ use crate::yaml_dias::{Diagram, EdgeWeight, ImportError, NumOrString};
 
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 
+pub type Topology = CanonGraph<Momentum, EdgeWeight, Undirected>;
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct TopMapper {
-    seen: IndexMap<CanonGraph<Momentum, EdgeWeight, Undirected>, NumOrString>,
+    seen: IndexMap<Topology, NumOrString>,
     pub add_subgraphs: bool,
 }
 
@@ -55,6 +57,7 @@ impl TopMapper {
         debug!("Mapping graph {name}: {}", graph.format());
         let graph = contract_duplicate(graph);
         let canon = into_canon(graph);
+        trace!("Canonical form of {name}: {}", canon.get().format());
 
         if let Some((target, topname)) = self.seen.get_key_value(&canon) {
             debug!("{name} is {topname}");
@@ -91,7 +94,7 @@ impl TopMapper {
 
     fn insert_subgraphs(
         &mut self,
-        graph: CanonGraph<Momentum, EdgeWeight, Undirected>,
+        graph: Topology,
         name: NumOrString,
     ) {
         trace!("Inserting {}", graph.get().format());
