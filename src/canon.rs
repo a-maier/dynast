@@ -1,3 +1,4 @@
+use ahash::AHashSet;
 use derivative::Derivative;
 use log::trace;
 use nauty_pet::prelude::*;
@@ -82,5 +83,26 @@ pub(crate) fn contract_edge(
     g: CanonGraph<Momentum, EdgeWeight, Undirected>,
     idx: usize,
 ) -> CanonGraph<Momentum, EdgeWeight, Undirected> {
-    into_canon(contract_graph_edge(g.into(), idx))
+    let mut orig_external = AHashSet::new();
+    for p in g.node_weights() {
+        for term in p.terms() {
+            orig_external.insert(term.symbol());
+        }
+    }
+    let mut contracted = contract_graph_edge(g.into(), idx);
+    let mut new_external = AHashSet::new();
+    for p in contracted.node_weights() {
+        for term in p.terms() {
+            new_external.insert(term.symbol());
+        }
+    }
+    for q in orig_external.difference(&new_external) {
+        trace!("Removing external momentum {q}");
+        for prop in contracted.edge_weights_mut() {
+            let mut terms = std::mem::take(&mut prop.p).into_terms();
+            terms.retain(|t| t.symbol() != *q);
+            prop.p = terms.into_iter().collect();
+        }
+    }
+    into_canon(contracted)
 }
