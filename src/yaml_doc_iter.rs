@@ -1,12 +1,12 @@
 use std::io::{BufRead, Read, Result};
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub(crate) struct YamlDocIter<T> {
+pub struct YamlDocIter<T> {
     reader: T,
 }
 
 impl<T: BufRead> YamlDocIter<T> {
-    pub(crate) fn new(reader: T) -> Self {
+    pub fn new(reader: T) -> Self {
         Self { reader }
     }
 }
