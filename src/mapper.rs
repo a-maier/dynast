@@ -27,6 +27,10 @@ impl TopMapper {
         Self::default()
     }
 
+    pub fn into_topologies(self) -> impl Iterator<Item = (Topology, NumOrString)> {
+        self.seen.into_iter()
+    }
+
     pub fn map_dia(
         &mut self,
         name: NumOrString,
