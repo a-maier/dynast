@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use std::hash::Hash;
 
 use ahash::RandomState;
 use log::{debug, trace};
@@ -10,15 +11,37 @@ use crate::canon::{contract_edge, into_canon};
 use crate::graph_util::{contract_duplicate, Format};
 use crate::momentum::Momentum;
 use crate::momentum_mapping::{Mapping, MappingError};
+use crate::symbol::Symbol;
 use crate::yaml_dias::{Diagram, EdgeWeight, ImportError, NumOrString};
 
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
+type IndexSet<T> = indexmap::IndexSet<T, RandomState>;
 
 pub type Topology = CanonGraph<Momentum, EdgeWeight, Undirected>;
 
+#[derive(Clone, Debug)]
+pub(crate) struct TopologyWithExtMom {
+    pub(crate) external_momenta: IndexSet<Symbol>,
+    pub(crate) graph: Topology
+}
+
+impl Hash for TopologyWithExtMom {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.graph.hash(state);
+    }
+}
+
+impl PartialEq for TopologyWithExtMom {
+    fn eq(&self, other: &Self) -> bool {
+        self.graph == other.graph
+    }
+}
+
+impl Eq for TopologyWithExtMom { }
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct TopMapper {
-    seen: IndexMap<Topology, NumOrString>,
+    seen: IndexMap<TopologyWithExtMom, NumOrString>,
     pub add_subgraphs: bool,
 }
 
@@ -28,7 +51,7 @@ impl TopMapper {
     }
 
     pub fn into_topologies(self) -> impl Iterator<Item = (Topology, NumOrString)> {
-        self.seen.into_iter()
+        self.seen.into_iter().map(|(t, n)| (t.graph, n))
     }
 
     pub fn map_dia(
@@ -60,17 +83,19 @@ impl TopMapper {
     ) -> Result<(NumOrString, Mapping), TopMapError> {
         debug!("Mapping graph {name}: {}", graph.format());
         let graph = contract_duplicate(graph);
-        let canon = into_canon(graph);
-        trace!("Canonical form of {name}: {}", canon.get().format());
+        let graph = into_canon(graph);
+        let external_momenta = extract_external_momenta(graph.get());
+        let canon = TopologyWithExtMom{ graph, external_momenta };
+        trace!("Canonical form of {name}: {}", canon.graph.get().format());
 
         if let Some((target, topname)) = self.seen.get_key_value(&canon) {
             debug!("{name} is {topname}");
-            let map = Mapping::new(canon.get(), target.get())?;
+            let map = Mapping::new(&canon, &target)?;
             return Ok((topname.clone(), map));
         };
 
         debug!("{name} is a new topology");
-        let map = Mapping::identity(canon.get());
+        let map = Mapping::identity(&canon);
         if self.add_subgraphs {
             self.insert_subgraphs(canon, name.clone())
         } else {
@@ -86,10 +111,12 @@ impl TopMapper {
     ) -> Result<Option<(NumOrString, Mapping)>, TopMapError> {
         debug!("Trying to map graph {}", graph.format());
         let graph = contract_duplicate(graph);
-        let canon = into_canon(graph);
+        let graph = into_canon(graph);
+        let external_momenta = extract_external_momenta(graph.get());
+        let canon = TopologyWithExtMom{ graph, external_momenta };
         if let Some((target, topname)) = self.seen.get_key_value(&canon) {
             debug!("graph is {topname}");
-            let map = Mapping::new(canon.get(), target.get())?;
+            let map = Mapping::new(&canon, &target)?;
             return Ok(Some((topname.clone(), map)));
         } else {
             Ok(None)
@@ -98,12 +125,12 @@ impl TopMapper {
 
     fn insert_subgraphs(
         &mut self,
-        graph: Topology,
+        top: TopologyWithExtMom,
         name: NumOrString,
     ) {
-        trace!("Inserting {}", graph.get().format());
+        trace!("Inserting {}", top.graph.get().format());
         let contractible_edges =
-            graph.edge_references().enumerate().filter_map(|(e, edge)| {
+            top.graph.edge_references().enumerate().filter_map(|(e, edge)| {
                 if edge.source() != edge.target() {
                     Some(e)
                 } else {
@@ -111,13 +138,17 @@ impl TopMapper {
                 }
             });
         for edge in contractible_edges {
-            trace!("Contracting edge {edge} of {}", graph.get().format());
-            let subgraph = contract_edge(graph.clone(), edge);
+            trace!("Contracting edge {edge} of {}", top.graph.get().format());
+            let subgraph = contract_edge(top.graph.clone(), edge);
+            let subgraph = TopologyWithExtMom {
+                external_momenta: top.external_momenta.clone(),
+                graph: subgraph
+            };
             if !self.seen.contains_key(&subgraph) {
                 self.insert_subgraphs(subgraph, name.clone())
             }
         }
-        self.seen.insert(graph, name);
+        self.seen.insert(top, name);
     }
 }
 
@@ -128,6 +159,16 @@ pub enum TopMapError {
     ConvError(#[from] ImportError),
     #[error("Failed to map onto topology: {0}")]
     MapError(#[from] MappingError),
+}
+
+fn extract_external_momenta<E>(g: &UnGraph<Momentum, E>) -> IndexSet<Symbol> {
+    let mut res = IndexSet::default();
+    for p in g.node_weights() {
+        for term in p.terms() {
+            res.insert(term.symbol());
+        }
+    }
+    res
 }
 
 #[cfg(test)]

@@ -10,6 +10,7 @@ use petgraph::{graph::UnGraph, visit::EdgeRef};
 use thiserror::Error;
 
 use crate::graph_util::Format;
+use crate::mapper::TopologyWithExtMom;
 use crate::momentum::{Momentum, Term};
 use crate::symbol::Symbol;
 use crate::yaml_dias::EdgeWeight;
@@ -39,9 +40,8 @@ pub enum MappingError {
 }
 
 impl Mapping {
-    pub(crate) fn identity(g: &UnGraph<Momentum, EdgeWeight>) -> Self {
-        let external_momenta = extract_external_momenta(g);
-        let map = extract_loop_momenta(g, &external_momenta)
+    pub(crate) fn identity(g: &TopologyWithExtMom) -> Self {
+        let map = extract_loop_momenta(g)
             .into_iter()
             .map(|p| (p, p.into()))
             .collect();
@@ -49,18 +49,16 @@ impl Mapping {
     }
 
     pub(crate) fn new(
-        from: &UnGraph<Momentum, EdgeWeight>,
-        to: &UnGraph<Momentum, EdgeWeight>,
+        from: &TopologyWithExtMom,
+        to: &TopologyWithExtMom,
     ) -> Result<Self, MappingError> {
-        debug!("Mapping {} onto {}", from.format(), to.format());
-        if !shift_needed(from, to) {
+        debug!("Mapping {} onto {}", from.graph.get().format(), to.graph.get().format());
+        if !shift_needed(from.graph.get(), to.graph.get()) {
             return Ok(Self::identity(from));
         }
-        debug_assert_eq!(from.edge_count(), to.edge_count());
-        let ext_momenta = extract_external_momenta(from);
-        debug_assert_eq!(ext_momenta, extract_external_momenta(to));
-        let loop_momenta = extract_loop_momenta(from, &ext_momenta);
-        let to_loop_momenta = extract_loop_momenta(to, &ext_momenta);
+        debug_assert_eq!(from.graph.get().edge_count(), to.graph.get().edge_count());
+        let loop_momenta = extract_loop_momenta(from);
+        let to_loop_momenta = extract_loop_momenta(to);
         if loop_momenta != to_loop_momenta {
             return Err(MappingError::MomentumMismatch(
                 loop_momenta,
@@ -72,14 +70,16 @@ impl Mapping {
         let loop_momentum_pos = IndexMap::from_iter(
             loop_momenta.iter().enumerate().map(|(n, p)| (*p, n)),
         );
-        let mut ext_momenta = Vec::from_iter(ext_momenta);
+        let mut ext_momenta = Vec::from_iter(
+            from.external_momenta.union(&to.external_momenta).copied()
+        );
         ext_momenta.sort();
         let ext_momentum_pos = IndexMap::from_iter(
             ext_momenta.iter().enumerate().map(|(n, p)| (*p, n)),
         );
 
         let mut shifts = Vec::new();
-        for (from, to) in from.edge_references().zip(to.edge_references()) {
+        for (from, to) in from.graph.get().edge_references().zip(to.graph.get().edge_references()) {
             debug_assert_eq!(from.source(), to.source());
             debug_assert_eq!(from.target(), to.target());
             debug_assert_eq!(from.weight().m, to.weight().m);
@@ -270,24 +270,13 @@ impl<'a> Ord for Shift<'a> {
     }
 }
 
-fn extract_external_momenta<E>(g: &UnGraph<Momentum, E>) -> IndexSet<Symbol> {
-    let mut res = IndexSet::default();
-    for p in g.node_weights() {
-        for term in p.terms() {
-            res.insert(term.symbol());
-        }
-    }
-    res
-}
-
-fn extract_loop_momenta<N>(
-    g: &UnGraph<N, EdgeWeight>,
-    external_momenta: &IndexSet<Symbol>,
+fn extract_loop_momenta(
+    g: &TopologyWithExtMom
 ) -> IndexSet<Symbol> {
     let mut res = IndexSet::default();
-    for w in g.edge_weights() {
+    for w in g.graph.get().edge_weights() {
         for term in w.p.terms() {
-            if !external_momenta.contains(&term.symbol()) {
+            if !g.external_momenta.contains(&term.symbol()) {
                 res.insert(term.symbol());
             }
         }
