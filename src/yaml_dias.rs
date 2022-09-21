@@ -237,7 +237,7 @@ fn term(input: &str) -> IResult<&str, Term> {
         multispace0,
         var,
     )(input)?;
-    let sym = Symbol::new_unchecked(sym);
+    let sym = Symbol::new(sym);
     let term = if let Some(coeff) = coeff {
         Term::new(coeff as i32, sym)
     } else {
