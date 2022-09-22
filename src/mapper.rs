@@ -224,6 +224,10 @@ mod tests {
         let denominators = vec![Prop(1, 1, String("-l1".to_owned()), Num(0))];
         let res = mapper.map_dia(Num(2), Diagram::new(denominators)).unwrap();
         assert_eq!(res.0, Num(1));
+
+        let denominators = vec![Prop(1, 1, String("l1-q".to_owned()), Num(0))];
+        let res = mapper.map_dia(Num(3), Diagram::new(denominators)).unwrap();
+        assert_eq!(res.0, Num(1));
     }
 
     #[test]
