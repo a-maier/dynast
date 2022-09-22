@@ -137,7 +137,7 @@ impl TopMapper {
                     None
                 }
             });
-        for edge in contractible_edges {
+        for edge in contractible_edges.rev() {
             trace!("Contracting edge {edge} of {}", top.graph.get().format());
             let subgraph = contract_edge(top.graph.clone(), edge);
             let subgraph = TopologyWithExtMom {
