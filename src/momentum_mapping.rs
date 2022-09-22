@@ -57,8 +57,18 @@ impl Mapping {
             return Ok(Self::identity(from));
         }
         debug_assert_eq!(from.graph.get().edge_count(), to.graph.get().edge_count());
-        let loop_momenta = extract_loop_momenta(from);
-        let to_loop_momenta = extract_loop_momenta(to);
+        let mut ext_momenta = Vec::from_iter(
+            from.external_momenta.union(&to.external_momenta).copied()
+        );
+        ext_momenta.sort();
+        let mut loop_momenta = extract_loop_momenta(from);
+        let mut to_loop_momenta = extract_loop_momenta(to);
+        for q in &ext_momenta {
+            loop_momenta.remove(q);
+            to_loop_momenta.remove(q);
+        }
+        let loop_momenta = loop_momenta;
+        let to_loop_momenta = to_loop_momenta;
         if loop_momenta != to_loop_momenta {
             return Err(MappingError::MomentumMismatch(
                 loop_momenta,
@@ -70,10 +80,6 @@ impl Mapping {
         let loop_momentum_pos = IndexMap::from_iter(
             loop_momenta.iter().enumerate().map(|(n, p)| (*p, n)),
         );
-        let mut ext_momenta = Vec::from_iter(
-            from.external_momenta.union(&to.external_momenta).copied()
-        );
-        ext_momenta.sort();
         let ext_momentum_pos = IndexMap::from_iter(
             ext_momenta.iter().enumerate().map(|(n, p)| (*p, n)),
         );
