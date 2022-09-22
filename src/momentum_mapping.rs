@@ -99,13 +99,11 @@ impl Mapping {
         let (l, q, lp, qp) =
             to_matrices(&shifts, &loop_momentum_pos, &ext_momentum_pos);
 
-        let (lred, qred, lpred, qpred) =
-            trunc_independent(l.clone(), q.clone(), lp.clone(), qp.clone());
+        trace!("{l} * l + {q} * q -> {lp} * l + {qp} * q");
 
-        trace!("{lred} * l + {qred} * q -> {lpred} * l + {qpred} * q");
-        let linv = lred.try_inverse().unwrap();
-        let o = &linv * &lpred;
-        let s = &linv * (&qpred - &qred);
+        let linv = l.clone().try_inverse().unwrap();
+        let o = &linv * &lp;
+        let s = &linv * (&qp - &q);
 
         debug_assert_eq!(lp, &l * &o);
         debug_assert_eq!(qp, &l * &s + &q);
@@ -163,19 +161,27 @@ fn to_matrices(
     lpos: &IndexMap<Symbol, usize>,
     qpos: &IndexMap<Symbol, usize>,
 ) -> (DMatrix<f64>, DMatrix<f64>, DMatrix<f64>, DMatrix<f64>) {
-    let nshifts = shifts.len();
     let nloops = lpos.len();
     let next = qpos.len();
-    let mut l = DMatrix::zeros(nshifts, nloops);
-    let mut q = DMatrix::zeros(nshifts, next);
-    let mut lp = DMatrix::zeros(nshifts, nloops);
-    let mut qp = DMatrix::zeros(nshifts, next);
+    let mut l = DMatrix::zeros(nloops, nloops);
+    let mut q = DMatrix::zeros(nloops, next);
+    let mut lp = DMatrix::zeros(nloops, nloops);
+    let mut qp = DMatrix::zeros(nloops, next);
     let extr = CoeffExtract { lpos, qpos };
-    for (row, shift) in shifts.iter().enumerate() {
+    let mut row = 0;
+    for shift in shifts.iter() {
         extr.extract_into(shift.lhs, l.row_mut(row), q.row_mut(row));
         extr.extract_into(shift.rhs, lp.row_mut(row), qp.row_mut(row));
+        row += 1;
+        let rank = l.rows(0, row).rank(1e-10);
+        if rank < row {
+            row -= 1;
+        }
+        if row >= nloops {
+            return (l, q, lp, qp);
+        }
     }
-    (l, q, lp, qp)
+    unreachable!("Number of independent shifts cannot be smaller than number of loops")
 }
 
 struct CoeffExtract<'a> {
@@ -211,35 +217,6 @@ fn shift_needed(
     from.edge_weights()
         .zip(to.edge_weights())
         .any(|(from, to)| from.p != to.p && from.p != -to.p.clone())
-}
-
-fn trunc_independent(
-    mut l: DMatrix<f64>,
-    mut q: DMatrix<f64>,
-    mut lp: DMatrix<f64>,
-    mut qp: DMatrix<f64>,
-) -> (DMatrix<f64>, DMatrix<f64>, DMatrix<f64>, DMatrix<f64>) {
-    let nloops = l.ncols();
-    for dim in 2..=nloops {
-        loop {
-            let rank = l.rows(0, dim).rank(1e-10);
-            if rank == dim {
-                break;
-            }
-            l = l.remove_row(dim);
-            q = q.remove_row(dim);
-            lp = lp.remove_row(dim);
-            qp = qp.remove_row(dim);
-        }
-    }
-    if l.nrows() > nloops {
-        let ndelete = l.nrows() - nloops;
-        l = l.remove_rows(nloops, ndelete);
-        q = q.remove_rows(nloops, ndelete);
-        lp = lp.remove_rows(nloops, ndelete);
-        qp = qp.remove_rows(nloops, ndelete);
-    }
-    (l, q, lp, qp)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
