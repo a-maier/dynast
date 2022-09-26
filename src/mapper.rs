@@ -90,7 +90,7 @@ impl TopMapper {
 
         if let Some((target, topname)) = self.seen.get_key_value(&canon) {
             debug!("{name} is {topname}");
-            let map = Mapping::new(&canon, &target)?;
+            let map = Mapping::new(&canon, target)?;
             return Ok((topname.clone(), map));
         };
 
@@ -116,8 +116,8 @@ impl TopMapper {
         let canon = TopologyWithExtMom{ graph, external_momenta };
         if let Some((target, topname)) = self.seen.get_key_value(&canon) {
             debug!("graph is {topname}");
-            let map = Mapping::new(&canon, &target)?;
-            return Ok(Some((topname.clone(), map)));
+            let map = Mapping::new(&canon, target)?;
+            Ok(Some((topname.clone(), map)))
         } else {
             Ok(None)
         }
