@@ -35,8 +35,20 @@ impl Display for Mapping {
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum MappingError {
-    #[error("Sets of loop momenta differ: {{{}}} != {{{}}}", join(.0, ", "), join(.1, ", "))]
-    MomentumMismatch(IndexSet<Symbol>, IndexSet<Symbol>),
+    MomentumMismatch(Box<(IndexSet<Symbol>, IndexSet<Symbol>)>),
+}
+
+impl Display for MappingError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            MappingError::MomentumMismatch(err) => write!(
+                f,
+                "Sets of loop momenta differ: {{{}}} != {{{}}}",
+                join(&err.0, ", "),
+                join(&err.1, ", "),
+            )
+        }
+    }
 }
 
 impl Mapping {
@@ -70,10 +82,10 @@ impl Mapping {
         let loop_momenta = loop_momenta;
         let to_loop_momenta = to_loop_momenta;
         if loop_momenta != to_loop_momenta {
-            return Err(MappingError::MomentumMismatch(
+            return Err(MappingError::MomentumMismatch(Box::new((
                 loop_momenta,
                 to_loop_momenta,
-            ));
+            ))));
         }
         let mut loop_momenta = Vec::from_iter(loop_momenta);
         loop_momenta.sort();
