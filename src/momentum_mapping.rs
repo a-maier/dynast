@@ -4,7 +4,7 @@ use std::fmt::{self, Display};
 use ahash::RandomState;
 use itertools::{izip, join, Itertools};
 use log::{debug, trace};
-use nalgebra::{DMatrix, Dim, Matrix, MatrixSliceMut, RawStorage, U1};
+use nalgebra::{DMatrix, Dim, Matrix, MatrixViewMut, RawStorage, U1};
 use num_traits::Zero;
 use petgraph::{graph::UnGraph, visit::EdgeRef};
 use thiserror::Error;
@@ -193,8 +193,8 @@ impl<'a> CoeffExtract<'a> {
     fn extract_into<C, R>(
         &self,
         p: &Momentum,
-        mut l: MatrixSliceMut<'_, f64, U1, C, R, C>,
-        mut q: MatrixSliceMut<'_, f64, U1, C, R, C>,
+        mut l: MatrixViewMut<'_, f64, U1, C, R, C>,
+        mut q: MatrixViewMut<'_, f64, U1, C, R, C>,
     ) where
         C: Dim,
         R: Dim,

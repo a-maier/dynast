@@ -142,7 +142,7 @@ struct Args {
     subtopologies: bool,
 
     /// Output format.
-    #[clap(short, long, arg_enum, default_value = "yaml")]
+    #[clap(short, long, value_enum, default_value = "yaml")]
     format: OutFormat,
 
     /// Output file. Print to standard output if absent.

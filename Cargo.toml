@@ -14,16 +14,16 @@ categories = ["science"]
 [dependencies]
 ahash = { version = "0.8", features = ["serde"] }
 anyhow = "1.0"
-clap = { version = "3.0", features = ["derive"] }
+clap = { version = "4.1", features = ["derive"] }
 derivative = "2.2"
-env_logger = "0.9"
+env_logger = "0.10"
 indexmap = { version = "1.8", features = ["serde"] }
 itertools = "0.10"
 lazy_static = "1.4"
 log = "0.4"
 math-symbols = { git = "ssh://git@gitlab.dur.scotgrid.ac.uk/tomuca/math-symbols.git", tag = "0.1.0" }
 memmap = "0.7"
-nalgebra = "0.31"
+nalgebra = "0.32"
 nauty-pet = { version = "0.8", features = ["stable"] }
 nom = "7"
 num-rational = { version = "0.4", features = ["serde"] }
