@@ -1,10 +1,13 @@
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::convert::From;
 use std::fmt::{self, Display};
+use std::iter::Sum;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use crate::symbol::Symbol;
 
+use ahash::AHashMap;
 use num_traits::Zero;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -460,6 +463,74 @@ impl Mul<Symbol> for i32 {
 
     fn mul(self, s: Symbol) -> Self::Output {
         Term::new(self, s)
+    }
+}
+
+pub trait Replace<M> {
+    type Output;
+
+    fn replace(self, map: M) -> Self::Output;
+}
+
+impl<'a> Replace<&'a AHashMap<Symbol, Momentum>> for Symbol {
+    type Output = Momentum;
+
+    fn replace(self, map: &'a AHashMap<Symbol, Momentum>) -> Self::Output {
+        map.get(&self).cloned().unwrap_or(Momentum::from(self))
+    }
+}
+
+impl<'a> Replace<&'a HashMap<Symbol, Momentum>> for Symbol {
+    type Output = Momentum;
+
+    fn replace(self, map: &'a HashMap<Symbol, Momentum>) -> Self::Output {
+        map.get(&self).cloned().unwrap_or(Momentum::from(self))
+    }
+}
+
+impl<'a> Replace<&'a AHashMap<Symbol, Momentum>> for Term {
+    type Output = Momentum;
+
+    fn replace(self, map: &'a AHashMap<Symbol, Momentum>) -> Self::Output {
+        let Term{ symbol, coeff } = self;
+        coeff * symbol.replace(map)
+    }
+}
+
+impl<'a> Replace<&'a HashMap<Symbol, Momentum>> for Term {
+    type Output = Momentum;
+
+    fn replace(self, map: &'a HashMap<Symbol, Momentum>) -> Self::Output {
+        let Term{ symbol, coeff } = self;
+        coeff * symbol.replace(map)
+    }
+}
+
+impl<'a> Replace<&'a AHashMap<Symbol, Momentum>> for Momentum {
+    type Output = Momentum;
+
+    fn replace(self, map: &'a AHashMap<Symbol, Momentum>) -> Self::Output {
+        self.into_terms()
+            .into_iter()
+            .map(|t| t.replace(map))
+            .sum()
+    }
+}
+
+impl<'a> Replace<&'a HashMap<Symbol, Momentum>> for Momentum {
+    type Output = Momentum;
+
+    fn replace(self, map: &'a HashMap<Symbol, Momentum>) -> Self::Output {
+        self.into_terms()
+            .into_iter()
+            .map(|t| t.replace(map))
+            .sum()
+    }
+}
+
+impl Sum for Momentum {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.reduce(|acc, e| acc + e).unwrap_or_default()
     }
 }
 

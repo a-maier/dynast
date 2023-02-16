@@ -119,28 +119,29 @@ mod yaml_doc_iter;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write, BufRead};
 
-use ahash::RandomState;
+use ahash::{RandomState, AHashMap};
 use anyhow::{anyhow, Context, Result};
 use env_logger::Env;
 use lazy_static::lazy_static;
 use log::{debug, info, trace};
 use nom::InputIter;
+use petgraph::{Graph, graph::UnGraph};
 use regex::bytes::Regex;
-use writer::OutFormat;
 
 use crate::form_input::FormDiaReader;
 use crate::graph_util::Format;
 use crate::mapper::TopMapper;
+use crate::momentum::{Momentum, Replace};
 use crate::opt::Args;
+use crate::symbol::Symbol;
 use crate::version::VERSION_STRING;
 use crate::writer::{write, write_header};
-use crate::yaml_dias::{Diagram, NumOrString};
+use crate::yaml_dias::{EdgeWeight, Diagram, NumOrString};
 use crate::yaml_doc_iter::YamlDocIter;
 
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 
 fn main() -> Result<()> {
-    use clap::Parser;
     let args = Args::parse();
     let env = Env::default().filter_or("DYNASTY_LOG", &args.loglevel);
     env_logger::init_from_env(env);
@@ -176,8 +177,8 @@ fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
             format!("Reading from {filename:?}")
         })?;
         if let Err(err) =  match in_format {
-            InFormat::Yaml => write_mappings_from_yaml(&mut mapper, reader, &mut out, args.format),
-            InFormat::Form => write_mappings_from_form(&mut mapper, reader, &mut out, args.format),
+            InFormat::Yaml => write_mappings_from_yaml(&mut mapper, reader, &mut out, &args),
+            InFormat::Form => write_mappings_from_form(&mut mapper, reader, &mut out, &args),
         } {
             return Err(err).with_context(|| {
                 format!("Reading from {filename:?}")
@@ -191,7 +192,7 @@ fn write_mappings_from_yaml(
     mapper: &mut TopMapper,
     reader: impl BufRead,
     mut out: impl Write,
-    format: OutFormat
+    args: &Args
 ) -> Result<()> {
     for document in YamlDocIter::new(reader) {
         let document = document?;
@@ -214,10 +215,14 @@ fn write_mappings_from_yaml(
         };
         for (name, dia) in dias {
             debug!("Read {name}: {}", dia.format());
+            let dia = replace_masses(dia, args.replace_masses());
+            trace!("After replacing masses: {}", dia.format());
+            let graph = Graph::try_from(dia)?;
+            let graph = replace_momenta(graph, args.replace_momenta());
             let (topname, map) = mapper
-                .map_dia(name.clone(), dia)
+                .map_graph(name.clone(), graph)
                 .with_context(|| format!("Mapping diagram {name}"))?;
-            write(&mut out, &name, &topname, &map, format)?;
+            write(&mut out, &name, &topname, &map, args.format)?;
         }
     }
     Ok(())
@@ -227,21 +232,23 @@ fn write_mappings_from_form(
     mapper: &mut TopMapper,
     reader: impl BufRead,
     mut out: impl Write,
-    format: OutFormat
+    args: &Args
 ) -> Result<(), anyhow::Error> {
     for item in FormDiaReader::new(reader) {
         let (name, dia) = item?;
         // TODO: code duplication
         debug!("Read {name}: {}", dia.format());
+        let dia = replace_masses(dia, args.replace_masses());
+        trace!("After replacing masses: {}", dia.format());
+        let graph = Graph::try_from(dia)?;
+        let graph = replace_momenta(graph, args.replace_momenta());
         let (topname, map) = mapper
-            .map_dia(name.clone(), dia)
+            .map_graph(name.clone(), graph)
             .with_context(|| format!("Mapping diagram {name}"))?;
-        write(&mut out, &name, &topname, &map, format)?;
+        write(&mut out, &name, &topname, &map, args.format)?;
     }
     Ok(())
 }
-
-
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 enum InFormat {
@@ -270,4 +277,40 @@ fn get_format(reader: &mut impl BufRead) -> Result<InFormat> {
     } else {
         Ok(Default::default())
     }
+}
+
+fn replace_masses(
+    dia: Diagram,
+    replace_masses: &AHashMap<NumOrString, NumOrString>
+) -> Diagram {
+    use yaml_dias::Denom::*;
+    let mut dens = dia.into_denominators();
+    for den in &mut dens {
+        match den {
+            Prop(_, _, _, ref mut m) => {
+                if let Some(m_new) = replace_masses.get(m).cloned() {
+                    *m = m_new;
+                }
+            },
+            Sp(_, ref mut m) => {
+                if let Some(m_new) = replace_masses.get(m).cloned() {
+                    *m = m_new;
+                }
+            },
+        }
+    }
+    Diagram::new(dens)
+}
+
+fn replace_momenta(
+    mut graph: UnGraph<Momentum, EdgeWeight>,
+    replace_momenta: &AHashMap<Symbol, Momentum>
+) -> UnGraph<Momentum, EdgeWeight> {
+    for p in graph.node_weights_mut() {
+        *p = std::mem::take(p).replace(replace_momenta);
+    }
+    for p in graph.edge_weights_mut() {
+        p.p = std::mem::take(&mut p.p).replace(replace_momenta);
+    }
+    graph
 }
