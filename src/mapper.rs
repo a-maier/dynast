@@ -99,6 +99,24 @@ impl TopMapper {
             return Ok((topname.clone(), map));
         };
 
+        // try again with reversed external momenta
+        let TopologyWithExtMom{
+            external_momenta,
+            graph,
+        } = canon.clone();
+        let mut graph = UnGraph::from(graph);
+        for p in graph.node_weights_mut() {
+            *p = -std::mem::take(p);
+        }
+        graph.reverse();
+        let graph = into_canon(graph);
+        let canon2 = TopologyWithExtMom{ graph, external_momenta };
+        if let Some((target, topname)) = self.seen.get_key_value(&canon2) {
+            debug!("{name} is {topname}");
+            let map = Mapping::new(&canon2, target)?;
+            return Ok((topname.clone(), map));
+        };
+
         debug!("{name} is a new topology");
         let map = Mapping::identity(&canon);
         if self.add_subgraphs {
@@ -108,7 +126,6 @@ impl TopMapper {
         }
         Ok((name, map))
     }
-
 
     pub fn try_map_graph(
         &self,
