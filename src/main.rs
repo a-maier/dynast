@@ -104,6 +104,7 @@
 //! .end
 //! ```
 mod canon;
+mod form_input;
 mod graph_util;
 mod mapper;
 mod momentum;
@@ -116,13 +117,18 @@ mod yaml_dias;
 mod yaml_doc_iter;
 
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Write};
+use std::io::{BufReader, BufWriter, Write, BufRead};
 
 use ahash::RandomState;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use env_logger::Env;
+use lazy_static::lazy_static;
 use log::{debug, info, trace};
+use nom::InputIter;
+use regex::bytes::Regex;
+use writer::OutFormat;
 
+use crate::form_input::FormDiaReader;
 use crate::graph_util::Format;
 use crate::mapper::TopMapper;
 use crate::opt::Args;
@@ -151,8 +157,9 @@ fn main() -> Result<()> {
     }
 }
 
-
 fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
+    const BUF_SIZE: usize = 8192;
+
     let mut mapper = TopMapper::new();
     mapper.add_subgraphs = args.subtopologies;
     mapper.keep_duplicate = args.keep_duplicate;
@@ -164,36 +171,103 @@ fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
         info!("Reading diagrams from {filename:?}");
         let file = File::open(filename)
             .with_context(|| format!("Failed to read {filename:?}"))?;
-        let reader = BufReader::new(file);
-        for document in YamlDocIter::new(reader) {
-            let document = document?;
-            trace!(
-                "yaml document:\n{}",
-                std::str::from_utf8(&document).unwrap()
-            );
-            let dias: Result<IndexMap<NumOrString, Diagram>, _> =
-                serde_yaml::from_slice(&document);
-            let dias = match dias {
-                Ok(dias) => dias,
-                Err(err) => {
-                    // TODO: check for error type, but that is not accessible?!
-                    if format!("{err:?}") == "EndOfStream" {
-                        continue;
-                    } else {
-                        return Err(err).with_context(|| {
-                            format!("Reading from {filename:?}")
-                        });
-                    }
-                }
-            };
-            for (name, dia) in dias {
-                debug!("Read {name}: {}", dia.format());
-                let (topname, map) = mapper
-                    .map_dia(name.clone(), dia)
-                    .with_context(|| format!("Mapping diagram {name}"))?;
-                write(&mut out, &name, &topname, &map, args.format)?;
-            }
+        let mut reader = BufReader::with_capacity(BUF_SIZE, file);
+        let in_format = get_format(&mut reader).with_context(||{
+            format!("Reading from {filename:?}")
+        })?;
+        if let Err(err) =  match in_format {
+            InFormat::Yaml => write_mappings_from_yaml(&mut mapper, reader, &mut out, args.format),
+            InFormat::Form => write_mappings_from_form(&mut mapper, reader, &mut out, args.format),
+        } {
+            return Err(err).with_context(|| {
+                format!("Reading from {filename:?}")
+            });
         }
     }
     Ok(())
+}
+
+fn write_mappings_from_yaml(
+    mapper: &mut TopMapper,
+    reader: impl BufRead,
+    mut out: impl Write,
+    format: OutFormat
+) -> Result<()> {
+    for document in YamlDocIter::new(reader) {
+        let document = document?;
+        trace!(
+            "yaml document:\n{}",
+            std::str::from_utf8(&document).unwrap()
+        );
+        let dias: Result<IndexMap<NumOrString, Diagram>, _> =
+            serde_yaml::from_slice(&document);
+        let dias = match dias {
+            Ok(dias) => dias,
+            Err(err) => {
+                // TODO: check for error type, but that is not accessible?!
+                if format!("{err:?}") == "EndOfStream" {
+                    continue;
+                } else {
+                    return Err(err.into());
+                }
+            }
+        };
+        for (name, dia) in dias {
+            debug!("Read {name}: {}", dia.format());
+            let (topname, map) = mapper
+                .map_dia(name.clone(), dia)
+                .with_context(|| format!("Mapping diagram {name}"))?;
+            write(&mut out, &name, &topname, &map, format)?;
+        }
+    }
+    Ok(())
+}
+
+fn write_mappings_from_form(
+    mapper: &mut TopMapper,
+    reader: impl BufRead,
+    mut out: impl Write,
+    format: OutFormat
+) -> Result<(), anyhow::Error> {
+    for item in FormDiaReader::new(reader) {
+        let (name, dia) = item?;
+        // TODO: code duplication
+        debug!("Read {name}: {}", dia.format());
+        let (topname, map) = mapper
+            .map_dia(name.clone(), dia)
+            .with_context(|| format!("Mapping diagram {name}"))?;
+        write(&mut out, &name, &topname, &map, format)?;
+    }
+    Ok(())
+}
+
+
+
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+enum InFormat {
+    #[default]
+    Yaml,
+    Form,
+}
+
+lazy_static!{
+    static ref FORMAT_SPEC: Regex = Regex::new(r"dynasty-format:\s*(\w+)").unwrap();
+}
+
+fn get_format(reader: &mut impl BufRead) -> Result<InFormat> {
+    let mut buf = reader.fill_buf()?;
+    if let Some(line_end) = buf.position(|b| b == b'\n') {
+        buf = &buf[..line_end];
+    }
+    if let Some(format) = FORMAT_SPEC.captures(buf) {
+        let format_str = std::str::from_utf8(&format[1])?;
+        let format_str = format_str.to_lowercase();
+        match format_str.as_str() {
+            "form" => Ok(InFormat::Form),
+            "yaml" => Ok(InFormat::Yaml),
+            _ => Err(anyhow!("Unknown input format: `{format_str}`"))
+        }
+    } else {
+        Ok(Default::default())
+    }
 }
