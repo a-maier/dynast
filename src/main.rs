@@ -108,6 +108,7 @@ mod graph_util;
 mod mapper;
 mod momentum;
 mod momentum_mapping;
+mod opt;
 mod symbol;
 mod version;
 mod writer;
@@ -116,58 +117,40 @@ mod yaml_doc_iter;
 
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
-use std::path::PathBuf;
 
 use ahash::RandomState;
 use anyhow::{Context, Result};
-use clap::Parser;
 use env_logger::Env;
 use log::{debug, info, trace};
 
 use crate::graph_util::Format;
 use crate::mapper::TopMapper;
+use crate::opt::Args;
 use crate::version::VERSION_STRING;
-use crate::writer::{write, write_header, OutFormat};
+use crate::writer::{write, write_header};
 use crate::yaml_dias::{Diagram, NumOrString};
 use crate::yaml_doc_iter::YamlDocIter;
 
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 
-/// Map diagrams onto topologies
-#[derive(Parser, Debug)]
-#[clap(version, about, long_about = None)]
-struct Args {
-    /// Whether to allow mapping on subtopologies.
-    #[clap(short, long)]
-    subtopologies: bool,
+fn main() -> Result<()> {
+    use clap::Parser;
+    let args = Args::parse();
+    let env = Env::default().filter_or("DYNASTY_LOG", &args.loglevel);
+    env_logger::init_from_env(env);
+    info!("{}", &*VERSION_STRING);
 
-    /// Whether to keep multiple propagators with the same momentum
-    #[clap(short, long)]
-    keep_duplicate: bool,
-
-    /// Output format.
-    #[clap(short, long, value_enum, default_value = "yaml")]
-    format: OutFormat,
-
-    /// Output file. Print to standard output if absent.
-    #[clap(short, long)]
-    outfile: Option<PathBuf>,
-
-    /// Topology and diagram files.
-    #[clap()]
-    infiles: Vec<PathBuf>,
-
-    /// Verbosity level.
-    #[clap(
-        short,
-        long,
-        default_value = "info",
-        help = "Verbosity level.
-Possible values with increasing amount of output are
-'off', 'error', 'warn', 'info', 'debug', 'trace'."
-    )]
-    loglevel: String,
+    if let Some(filename) = &args.outfile {
+        let out = File::create(filename).with_context(
+            || format!("Trying to create {filename:?}")
+        )?;
+        let out = BufWriter::new(out);
+        write_mappings(args, out)
+    } else {
+        write_mappings(args, std::io::stdout())
+    }
 }
+
 
 fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
     let mut mapper = TopMapper::new();
@@ -213,21 +196,4 @@ fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
         }
     }
     Ok(())
-}
-
-fn main() -> Result<()> {
-    let args = Args::parse();
-    let env = Env::default().filter_or("DYNASTY_LOG", &args.loglevel);
-    env_logger::init_from_env(env);
-    info!("{}", &*VERSION_STRING);
-
-    if let Some(filename) = &args.outfile {
-        let out = File::create(filename).with_context(
-            || format!("Trying to create {filename:?}")
-        )?;
-        let out = BufWriter::new(out);
-        write_mappings(args, out)
-    } else {
-        write_mappings(args, std::io::stdout())
-    }
 }
