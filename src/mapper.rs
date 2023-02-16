@@ -43,6 +43,7 @@ impl Eq for TopologyWithExtMom { }
 pub struct TopMapper {
     seen: IndexMap<TopologyWithExtMom, NumOrString>,
     pub add_subgraphs: bool,
+    pub keep_duplicate: bool,
 }
 
 impl TopMapper {
@@ -82,7 +83,11 @@ impl TopMapper {
         graph: UnGraph<Momentum, EdgeWeight>,
     ) -> Result<(NumOrString, Mapping), TopMapError> {
         debug!("Mapping graph {name}: {}", graph.format());
-        let graph = contract_duplicate(graph);
+        let graph = if self.keep_duplicate {
+            graph
+        } else {
+            contract_duplicate(graph)
+        };
         let graph = into_canon(graph);
         let external_momenta = extract_external_momenta(graph.get());
         let canon = TopologyWithExtMom{ graph, external_momenta };

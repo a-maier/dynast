@@ -141,6 +141,10 @@ struct Args {
     #[clap(short, long)]
     subtopologies: bool,
 
+    /// Whether to keep multiple propagators with the same momentum
+    #[clap(short, long)]
+    keep_duplicate: bool,
+
     /// Output format.
     #[clap(short, long, value_enum, default_value = "yaml")]
     format: OutFormat,
@@ -167,9 +171,8 @@ Possible values with increasing amount of output are
 
 fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
     let mut mapper = TopMapper::new();
-    if args.subtopologies {
-        mapper.add_subgraphs = true;
-    }
+    mapper.add_subgraphs = args.subtopologies;
+    mapper.keep_duplicate = args.keep_duplicate;
 
     write_header(&mut out, args.format)
         .with_context(|| "Failed to write output header")?;
