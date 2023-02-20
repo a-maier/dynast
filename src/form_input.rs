@@ -32,7 +32,11 @@ impl<R: BufRead> FormDiaReader<R> {
                 _ => { }
             };
             if FORM_FOLD_END.is_match(&line) {
-                let name = NumOrString::String(name);
+                let name = if let Ok(num) = name.parse() {
+                    NumOrString::Num(num)
+                } else {
+                    NumOrString::String(name)
+                };
                 let dia = Diagram::new(props);
                 return Ok((name, dia));
             }
