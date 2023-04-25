@@ -12,7 +12,7 @@ use crate::{yaml_dias::NumOrString, momentum::Momentum};
 #[derive(Parser, Debug)]
 #[clap(version, about, long_about = None)]
 pub(crate) struct Args {
-    /// Whether to allow mapping on subtopologies.
+    /// Whether to allow mapping onto subtopologies.
     #[clap(short, long)]
     pub(crate) subtopologies: bool,
 
