@@ -24,7 +24,7 @@ log = "0.4"
 math-symbols = { git = "ssh://git@gitlab.dur.scotgrid.ac.uk/tomuca/math-symbols.git", tag = "0.1.0" }
 memmap = "0.7"
 nalgebra = "0.32"
-nauty-pet = { version = "0.8", features = ["stable"] }
+nauty-pet = { version = "0.9", features = ["stable"] }
 nom = "7"
 num-rational = { version = "0.4", features = ["serde"] }
 num-traits = "0.2"
@@ -35,7 +35,7 @@ serde_yaml = "0.9"
 thiserror = "1.0"
 
 [build-dependencies]
-vergen = "7"
+vergen = { version = "8", features = ["git", "gitcl"] }
 
 [lib]
 name = "dynasty"
