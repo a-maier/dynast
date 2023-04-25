@@ -14,7 +14,7 @@ categories = ["science"]
 [dependencies]
 ahash = { version = "0.8", features = ["serde"] }
 anyhow = "1.0"
-clap = { version = "4.1", features = ["derive"] }
+clap = { version = "4.2", features = ["derive"] }
 derivative = "2.2"
 env_logger = "0.10"
 indexmap = { version = "1.8", features = ["serde"] }
