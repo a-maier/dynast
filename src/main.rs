@@ -1,4 +1,4 @@
-//! dynasty is a program for identifying the topologies (or integral
+//! dynast is a program for identifying the topologies (or integral
 //! families) of Feynman graphs. It is based on [nauty and
 //! Traces](http://pallini.di.uniroma1.it/).
 //!
@@ -7,25 +7,25 @@
 //! If [Rust and Cargo](https://www.rust-lang.org/) are installed on your
 //! system, run
 //!
-//!     cargo install dynasty
+//!     cargo install dynast
 //!
 //! Precompiled executables are available on
-//! [github](https://github.com/a-maier/dynasty).
+//! [github](https://github.com/a-maier/dynast).
 //!
 //! # Usage
 //!
-//! dynasty reads in Feynman diagrams in a [YAML](https://yaml.org/) or
+//! dynast reads in Feynman diagrams in a [YAML](https://yaml.org/) or
 //! [FORM](https://github.com/vermaseren/form)-based format and, for each
 //! diagram, prints its topology and how loop momenta have to be shifted
 //! to obtain a uniform assignment of propagator momenta.
 //!
 //! Basic usage is
 //!
-//!   dynasty -o outfile.yml diagrams.yml
+//!   dynast -o outfile.yml diagrams.yml
 //!
 //! It is possible to pass more than one input file, for instance
 //!
-//!   dynasty -o outfile.yml topologies.yml diagrams.yml
+//!   dynast -o outfile.yml topologies.yml diagrams.yml
 //!
 //! to ensure the diagrams in `diagrams.yml` are mapped onto the
 //! topologies defined in `topologies.yml` as far as possible.
@@ -59,13 +59,13 @@
 //! the start and end of the propagator line. `p` is the propagator
 //! momentum (e.g. `l1 + q`) and `m` its mass. It is allowed to omit
 //! both `from` and `to` and the same time to denote a scalar product
-//! that is not associated with a graph edge. `dynasty` will ignore
+//! that is not associated with a graph edge. `dynast` will ignore
 //! such scalar products.
 //!
 //! The document separator `---` is optional but recommended for large
 //! input files to save memory.
 //!
-//! dynasty includes a
+//! dynast includes a
 //! [QGRAF](http://cfif.ist.utl.pt/~paulo/qgraf.html) style file
 //! `share/qgraf/yaml.sty` that generates the required input. If
 //! several fields have the same mass the corresponding masses in the
@@ -75,7 +75,7 @@
 //!
 //! FORM input files should start with the following line:
 //! ```
-//! * dynasty-format: FORM
+//! * dynast-format: FORM
 //! ```
 //! The remainder of the file should consist of diagram folds:
 //! ```
@@ -114,7 +114,7 @@
 //! cf dia;
 //! #include- topologies.frm
 //! * example diagram
-//! * the argument of `dia` should match the name in the dynasty input file
+//! * the argument of `dia` should match the name in the dynast input file
 //! local diagrams =
 //! + dia(1)
 //! * ... diagram information (propagators, vertices)
@@ -170,7 +170,7 @@ type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let env = Env::default().filter_or("DYNASTY_LOG", &args.loglevel);
+    let env = Env::default().filter_or("DYNAST_LOG", &args.loglevel);
     env_logger::init_from_env(env);
     info!("{}", &*VERSION_STRING);
 
@@ -285,7 +285,7 @@ enum InFormat {
 }
 
 lazy_static!{
-    static ref FORMAT_SPEC: Regex = Regex::new(r"dynasty-format:\s*(\w+)").unwrap();
+    static ref FORMAT_SPEC: Regex = Regex::new(r"dynast-format:\s*(\w+)").unwrap();
 }
 
 fn get_format(reader: &mut impl BufRead) -> Result<InFormat> {

@@ -1,5 +1,5 @@
 [package]
-name = "dynasty"
+name = "dynast"
 version = "0.8.2"
 edition = "2021"
 build = "build.rs"
@@ -9,7 +9,7 @@ license = "GPL-3.0-or-later"
 readme = "Readme.md"
 keywords = ["physics", "graph-algorithms"]
 categories = ["science"]
-repository = "https://github.com/a-maier/dynasty"
+repository = "https://github.com/a-maier/dynast"
 
 [dependencies]
 ahash = { version = "0.8", features = ["serde"] }
@@ -38,9 +38,9 @@ thiserror = "1.0"
 vergen = { version = "8", features = ["git", "gitcl"] }
 
 [lib]
-name = "dynasty"
+name = "dynast"
 path = "src/lib.rs"
 
 [[bin]]
-name = "dynasty"
+name = "dynast"
 path = "src/main.rs"
