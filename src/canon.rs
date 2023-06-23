@@ -29,7 +29,7 @@ pub(crate) fn into_canon(
     trace!("Relabelling: {relabel:?}");
     let g = relabel_nodes(g, relabel);
     trace!("Relabelled {}", g.format());
-    debug_assert!(g.is_identical(CanonGraph::from(g.clone()).get()));
+    debug_assert!(g.is_identical(&CanonGraph::from(g.clone())));
     g.into()
 }
 

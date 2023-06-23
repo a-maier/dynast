@@ -89,9 +89,9 @@ impl TopMapper {
             contract_duplicate(graph)
         };
         let graph = into_canon(graph);
-        let external_momenta = extract_external_momenta(graph.get());
+        let external_momenta = extract_external_momenta(&graph);
         let canon = TopologyWithExtMom{ graph, external_momenta };
-        trace!("Canonical form of {name}: {}", canon.graph.get().format());
+        trace!("Canonical form of {name}: {}", canon.graph.format());
 
         if let Some((target, topname)) = self.seen.get_key_value(&canon) {
             debug!("{name} is {topname}");
@@ -134,7 +134,7 @@ impl TopMapper {
         debug!("Trying to map graph {}", graph.format());
         let graph = contract_duplicate(graph);
         let graph = into_canon(graph);
-        let external_momenta = extract_external_momenta(graph.get());
+        let external_momenta = extract_external_momenta(&graph);
         let canon = TopologyWithExtMom{ graph, external_momenta };
         if let Some((target, topname)) = self.seen.get_key_value(&canon) {
             debug!("graph is {topname}");
@@ -150,7 +150,7 @@ impl TopMapper {
         top: TopologyWithExtMom,
         name: NumOrString,
     ) {
-        trace!("Inserting {}", top.graph.get().format());
+        trace!("Inserting {}", top.graph.format());
         let contractible_edges =
             top.graph.edge_references().enumerate().filter_map(|(e, edge)| {
                 if edge.source() != edge.target() {
@@ -160,7 +160,7 @@ impl TopMapper {
                 }
             });
         for edge in contractible_edges.rev() {
-            trace!("Contracting edge {edge} of {}", top.graph.get().format());
+            trace!("Contracting edge {edge} of {}", top.graph.format());
             let subgraph = contract_edge(top.graph.clone(), edge);
             let subgraph = TopologyWithExtMom {
                 external_momenta: top.external_momenta.clone(),

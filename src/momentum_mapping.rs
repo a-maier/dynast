@@ -64,11 +64,11 @@ impl Mapping {
         from: &TopologyWithExtMom,
         to: &TopologyWithExtMom,
     ) -> Result<Self, MappingError> {
-        debug!("Mapping {} onto {}", from.graph.get().format(), to.graph.get().format());
-        if !shift_needed(from.graph.get(), to.graph.get()) {
+        debug!("Mapping {} onto {}", from.graph.format(), to.graph.format());
+        if !shift_needed(&from.graph, &to.graph) {
             return Ok(Self::identity(from));
         }
-        debug_assert_eq!(from.graph.get().edge_count(), to.graph.get().edge_count());
+        debug_assert_eq!(from.graph.edge_count(), to.graph.edge_count());
         let mut ext_momenta = Vec::from_iter(
             from.external_momenta.union(&to.external_momenta).copied()
         );
@@ -97,7 +97,7 @@ impl Mapping {
         );
 
         let mut shifts = Vec::new();
-        for (from, to) in from.graph.get().edge_references().zip(to.graph.get().edge_references()) {
+        for (from, to) in from.graph.edge_references().zip(to.graph.edge_references()) {
             debug_assert_eq!(from.source(), to.source());
             debug_assert_eq!(from.target(), to.target());
             debug_assert_eq!(from.weight().m, to.weight().m);
@@ -269,7 +269,7 @@ fn extract_loop_momenta(
     g: &TopologyWithExtMom
 ) -> IndexSet<Symbol> {
     let mut res = IndexSet::default();
-    for w in g.graph.get().edge_weights() {
+    for w in g.graph.edge_weights() {
         for term in w.p.terms() {
             if !g.external_momenta.contains(&term.symbol()) {
                 res.insert(term.symbol());

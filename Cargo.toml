@@ -14,17 +14,17 @@ categories = ["science"]
 [dependencies]
 ahash = { version = "0.8", features = ["serde"] }
 anyhow = "1.0"
-clap = { version = "4.2", features = ["derive"] }
+clap = { version = "4.3", features = ["derive"] }
 derivative = "2.2"
 env_logger = "0.10"
 indexmap = { version = "1.8", features = ["serde"] }
-itertools = "0.10"
+itertools = "0.11"
 lazy_static = "1.4"
 log = "0.4"
 math-symbols = "0.1"
 memmap = "0.7"
 nalgebra = "0.32"
-nauty-pet = { version = "0.9", features = ["stable"] }
+nauty-pet = { version = "0.11", features = ["stable"] }
 nom = "7"
 num-rational = { version = "0.4", features = ["serde"] }
 num-traits = "0.2"
