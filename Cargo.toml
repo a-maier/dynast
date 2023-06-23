@@ -9,7 +9,7 @@ license = "GPL-3.0-or-later"
 readme = "Readme.md"
 keywords = ["physics", "graph-algorithms"]
 categories = ["science"]
-# repository = "https://github.com/a-maier/dynasty"
+repository = "https://github.com/a-maier/dynasty"
 
 [dependencies]
 ahash = { version = "0.8", features = ["serde"] }
