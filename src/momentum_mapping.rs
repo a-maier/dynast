@@ -188,6 +188,10 @@ fn to_matrices(
         let rank = l.rows(0, row).rank(1e-10);
         if rank < row {
             row -= 1;
+            l.row_mut(row).fill(0.);
+            lp.row_mut(row).fill(0.);
+            q.row_mut(row).fill(0.);
+            qp.row_mut(row).fill(0.);
         }
         if row >= nloops {
             return (l, q, lp, qp);
