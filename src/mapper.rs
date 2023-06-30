@@ -103,48 +103,22 @@ impl<ID: Clone + Display> TopMapper<ID> {
         graph: UnGraph<Momentum, EdgeWeight>,
         external_momenta: IndexSet<Symbol>
     ) -> Result<(ID, Mapping), TopMapError> {
-        debug!("Mapping graph {name}: {}", graph.format());
-        let graph = if self.keep_duplicate {
-            graph
-        } else {
-            contract_duplicate(graph)
-        };
-        let graph = into_canon(graph);
-        let canon = TopologyWithExtMom{ graph, external_momenta };
-        trace!("Canonical form of {name}: {}", canon.graph.format());
-
-        if let Some((target, topname)) = self.seen.get_key_value(&canon) {
-            debug!("{name} is {topname}");
-            let map = Mapping::new(&canon, target)?;
-            return Ok((topname.clone(), map));
-        };
-
-        // try again with reversed external momenta
-        let TopologyWithExtMom{
-            external_momenta,
+        let (res, canon) = self.try_map_graph_with_ext_helper(
             graph,
-        } = canon.clone();
-        let mut graph = UnGraph::from(graph);
-        for p in graph.node_weights_mut() {
-            *p = -std::mem::take(p);
-        }
-        graph.reverse();
-        let graph = into_canon(graph);
-        let canon2 = TopologyWithExtMom{ graph, external_momenta };
-        if let Some((target, topname)) = self.seen.get_key_value(&canon2) {
-            debug!("{name} is {topname}");
-            let map = Mapping::new(&canon2, target)?;
-            return Ok((topname.clone(), map));
-        };
-
-        debug!("{name} is a new topology");
-        let map = Mapping::identity(&canon);
-        if self.add_subgraphs {
-            self.insert_subgraphs(canon, name.clone())
+            external_momenta
+        )?;
+        if let Some(res) = res {
+            Ok(res)
         } else {
-            self.seen.insert(canon, name.clone());
+            debug!("{name} is a new topology");
+            let map = Mapping::identity(&canon);
+            if self.add_subgraphs {
+                self.insert_subgraphs(canon, name.clone())
+            } else {
+                self.seen.insert(canon, name.clone());
+            }
+            Ok((name, map))
         }
-        Ok((name, map))
     }
 
     pub fn try_map_graph(
@@ -160,6 +134,19 @@ impl<ID: Clone + Display> TopMapper<ID> {
         graph: UnGraph<Momentum, EdgeWeight>,
         external_momenta: IndexSet<Symbol>
     ) -> Result<Option<(ID, Mapping)>, TopMapError> {
+        let (res, _) = self.try_map_graph_with_ext_helper(
+            graph,
+            external_momenta
+        )?;
+        Ok(res)
+    }
+
+    // like `try_map_graph_with_ext`, but also returns the canonised graph
+    fn try_map_graph_with_ext_helper(
+        &self,
+        graph: UnGraph<Momentum, EdgeWeight>,
+        external_momenta: IndexSet<Symbol>
+    ) -> Result<(Option<(ID, Mapping)>, TopologyWithExtMom), TopMapError> {
         debug!("Trying to map graph {}", graph.format());
         let graph = if self.keep_duplicate {
             graph
@@ -173,7 +160,7 @@ impl<ID: Clone + Display> TopMapper<ID> {
         if let Some((target, topname)) = self.seen.get_key_value(&canon) {
             debug!("graph is {topname}");
             let map = Mapping::new(&canon, target)?;
-            return Ok(Some((topname.clone(), map)));
+            return Ok((Some((topname.clone(), map)), canon));
         }
 
         // try again with reversed external momenta
@@ -191,9 +178,9 @@ impl<ID: Clone + Display> TopMapper<ID> {
         if let Some((target, topname)) = self.seen.get_key_value(&canon2) {
             debug!("graph is {topname}");
             let map = Mapping::new(&canon2, target)?;
-            Ok(Some((topname.clone(), map)))
+            Ok((Some((topname.clone(), map)), canon))
         } else {
-            Ok(None)
+            Ok((None, canon))
         }
     }
 
