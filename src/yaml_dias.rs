@@ -31,6 +31,14 @@ pub struct Diagram {
 }
 
 impl Diagram {
+    pub fn denominators(&self) -> &Vec<Denom> {
+        &self.denominators
+    }
+
+    pub fn denominator(&self, n: usize) -> &Denom {
+        &self.denominators[n]
+    }
+
     pub fn into_denominators(self) -> Vec<Denom> {
         self.denominators
     }
