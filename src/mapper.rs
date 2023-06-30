@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use std::fmt::Display;
 use std::hash::Hash;
 
 use ahash::RandomState;
@@ -12,7 +13,7 @@ use crate::graph_util::{contract_duplicate, Format};
 use crate::momentum::Momentum;
 use crate::momentum_mapping::{Mapping, MappingError};
 use crate::symbol::Symbol;
-use crate::yaml_dias::{Diagram, EdgeWeight, ImportError, NumOrString};
+use crate::yaml_dias::{Diagram, EdgeWeight, ImportError};
 
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 type IndexSet<T> = indexmap::IndexSet<T, RandomState>;
@@ -39,27 +40,37 @@ impl PartialEq for TopologyWithExtMom {
 
 impl Eq for TopologyWithExtMom { }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct TopMapper {
-    seen: IndexMap<TopologyWithExtMom, NumOrString>,
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TopMapper<ID> {
+    seen: IndexMap<TopologyWithExtMom, ID>,
     pub add_subgraphs: bool,
     pub keep_duplicate: bool,
 }
 
-impl TopMapper {
+impl<ID> Default for TopMapper<ID> {
+    fn default() -> Self {
+        Self {
+            seen: Default::default(),
+            add_subgraphs: Default::default(),
+            keep_duplicate: Default::default(),
+        }
+    }
+}
+
+impl<ID: Clone + Display> TopMapper<ID> {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn into_topologies(self) -> impl Iterator<Item = (Topology, NumOrString)> {
+    pub fn into_topologies(self) -> impl Iterator<Item = (Topology, ID)> {
         self.seen.into_iter().map(|(t, n)| (t.graph, n))
     }
 
     pub fn map_dia(
         &mut self,
-        name: NumOrString,
+        name: ID,
         dia: Diagram,
-    ) -> Result<(NumOrString, Mapping), TopMapError> {
+    ) -> Result<(ID, Mapping), TopMapError> {
         debug!("Mapping diagram {name}: {}", dia.format());
         let graph = Graph::try_from(dia)?;
 
@@ -69,7 +80,7 @@ impl TopMapper {
     pub fn try_map_dia(
         &self,
         dia: Diagram,
-    ) -> Result<Option<(NumOrString, Mapping)>, TopMapError> {
+    ) -> Result<Option<(ID, Mapping)>, TopMapError> {
         debug!("Trying to map diagram {}", dia.format());
         let graph = Graph::try_from(dia)?;
 
@@ -79,9 +90,9 @@ impl TopMapper {
     // TODO: borrow checker complains if we return a `&NumOrString`
     pub fn map_graph(
         &mut self,
-        name: NumOrString,
+        name: ID,
         graph: UnGraph<Momentum, EdgeWeight>,
-    ) -> Result<(NumOrString, Mapping), TopMapError> {
+    ) -> Result<(ID, Mapping), TopMapError> {
         debug!("Mapping graph {name}: {}", graph.format());
         let graph = if self.keep_duplicate {
             graph
@@ -130,7 +141,7 @@ impl TopMapper {
     pub fn try_map_graph(
         &self,
         graph: UnGraph<Momentum, EdgeWeight>
-    ) -> Result<Option<(NumOrString, Mapping)>, TopMapError> {
+    ) -> Result<Option<(ID, Mapping)>, TopMapError> {
         debug!("Trying to map graph {}", graph.format());
         let graph = contract_duplicate(graph);
         let graph = into_canon(graph);
@@ -148,7 +159,7 @@ impl TopMapper {
     fn insert_subgraphs(
         &mut self,
         top: TopologyWithExtMom,
-        name: NumOrString,
+        name: ID,
     ) {
         trace!("Inserting {}", top.graph.format());
         let contractible_edges =
@@ -197,6 +208,7 @@ fn extract_external_momenta<E>(g: &UnGraph<Momentum, E>) -> IndexSet<Symbol> {
 mod tests {
     use super::*;
     use crate::yaml_dias::Denom::Prop;
+    use crate::yaml_dias::NumOrString::*;
 
     fn log_init() {
         let _ = env_logger::builder().is_test(true).try_init();
@@ -204,8 +216,6 @@ mod tests {
 
     #[test]
     fn map_simple() {
-        use NumOrString::*;
-
         log_init();
 
         let mut mapper = TopMapper::default();
@@ -231,7 +241,6 @@ mod tests {
 
     #[test]
     fn map_sub() {
-        use NumOrString::*;
         log_init();
 
         let mut mapper = TopMapper::default();
@@ -254,7 +263,6 @@ mod tests {
 
     #[test]
     fn map_2l() {
-        use NumOrString::*;
         log_init();
 
         let mut mapper = TopMapper::default();

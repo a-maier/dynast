@@ -216,7 +216,7 @@ fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
 }
 
 fn write_mappings_from_yaml(
-    mapper: &mut TopMapper,
+    mapper: &mut TopMapper<NumOrString>,
     reader: impl BufRead,
     mut out: impl Write,
     args: &Args
@@ -256,7 +256,7 @@ fn write_mappings_from_yaml(
 }
 
 fn write_mappings_from_form(
-    mapper: &mut TopMapper,
+    mapper: &mut TopMapper<NumOrString>,
     reader: impl BufRead,
     mut out: impl Write,
     args: &Args
