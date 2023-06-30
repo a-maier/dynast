@@ -93,6 +93,16 @@ impl<ID: Clone + Display> TopMapper<ID> {
         name: ID,
         graph: UnGraph<Momentum, EdgeWeight>,
     ) -> Result<(ID, Mapping), TopMapError> {
+        let ext_momenta = extract_external_momenta(&graph);
+        self.map_graph_with_ext(name, graph, ext_momenta)
+    }
+
+    pub fn map_graph_with_ext(
+        &mut self,
+        name: ID,
+        graph: UnGraph<Momentum, EdgeWeight>,
+        external_momenta: IndexSet<Symbol>
+    ) -> Result<(ID, Mapping), TopMapError> {
         debug!("Mapping graph {name}: {}", graph.format());
         let graph = if self.keep_duplicate {
             graph
@@ -100,7 +110,6 @@ impl<ID: Clone + Display> TopMapper<ID> {
             contract_duplicate(graph)
         };
         let graph = into_canon(graph);
-        let external_momenta = extract_external_momenta(&graph);
         let canon = TopologyWithExtMom{ graph, external_momenta };
         trace!("Canonical form of {name}: {}", canon.graph.format());
 
@@ -142,10 +151,18 @@ impl<ID: Clone + Display> TopMapper<ID> {
         &self,
         graph: UnGraph<Momentum, EdgeWeight>
     ) -> Result<Option<(ID, Mapping)>, TopMapError> {
+        let ext_momenta = extract_external_momenta(&graph);
+        self.try_map_graph_with_ext(graph, ext_momenta)
+    }
+
+    pub fn try_map_graph_with_ext(
+        &self,
+        graph: UnGraph<Momentum, EdgeWeight>,
+        external_momenta: IndexSet<Symbol>
+    ) -> Result<Option<(ID, Mapping)>, TopMapError> {
         debug!("Trying to map graph {}", graph.format());
         let graph = contract_duplicate(graph);
         let graph = into_canon(graph);
-        let external_momenta = extract_external_momenta(&graph);
         let canon = TopologyWithExtMom{ graph, external_momenta };
         if let Some((target, topname)) = self.seen.get_key_value(&canon) {
             debug!("graph is {topname}");
