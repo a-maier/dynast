@@ -194,7 +194,7 @@ pub enum TopMapError {
     MapError(#[from] MappingError),
 }
 
-fn extract_external_momenta<E>(g: &UnGraph<Momentum, E>) -> IndexSet<Symbol> {
+pub fn extract_external_momenta<E>(g: &UnGraph<Momentum, E>) -> IndexSet<Symbol> {
     let mut res = IndexSet::default();
     for p in g.node_weights() {
         for term in p.terms() {
