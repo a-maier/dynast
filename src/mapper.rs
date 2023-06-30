@@ -161,12 +161,36 @@ impl<ID: Clone + Display> TopMapper<ID> {
         external_momenta: IndexSet<Symbol>
     ) -> Result<Option<(ID, Mapping)>, TopMapError> {
         debug!("Trying to map graph {}", graph.format());
-        let graph = contract_duplicate(graph);
+        let graph = if self.keep_duplicate {
+            graph
+        } else {
+            contract_duplicate(graph)
+        };
         let graph = into_canon(graph);
         let canon = TopologyWithExtMom{ graph, external_momenta };
+        trace!("Canonical form of graph: {}", canon.graph.format());
+
         if let Some((target, topname)) = self.seen.get_key_value(&canon) {
             debug!("graph is {topname}");
             let map = Mapping::new(&canon, target)?;
+            return Ok(Some((topname.clone(), map)));
+        }
+
+        // try again with reversed external momenta
+        let TopologyWithExtMom{
+            external_momenta,
+            graph,
+        } = canon.clone();
+        let mut graph = UnGraph::from(graph);
+        for p in graph.node_weights_mut() {
+            *p = -std::mem::take(p);
+        }
+        graph.reverse();
+        let graph = into_canon(graph);
+        let canon2 = TopologyWithExtMom{ graph, external_momenta };
+        if let Some((target, topname)) = self.seen.get_key_value(&canon2) {
+            debug!("graph is {topname}");
+            let map = Mapping::new(&canon2, target)?;
             Ok(Some((topname.clone(), map)))
         } else {
             Ok(None)
