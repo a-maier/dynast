@@ -390,7 +390,7 @@ impl SubAssign<Term> for Momentum {
                     self.terms.remove(pos);
                 }
             }
-            Err(pos) => self.terms.insert(pos, rhs),
+            Err(pos) => self.terms.insert(pos, -rhs),
         }
     }
 }
