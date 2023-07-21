@@ -375,7 +375,7 @@ impl SubAssign<&Momentum> for Momentum {
 
 impl SubAssign<Momentum> for Momentum {
     fn sub_assign(&mut self, other: Momentum) {
-        self.add_assign(&other)
+        self.sub_assign(&other)
     }
 }
 
