@@ -4,10 +4,12 @@ use clap::ValueEnum;
 use itertools::Itertools;
 
 use crate::momentum_mapping::Mapping;
-use crate::yaml_dias::NumOrString;
 use crate::version::VERSION_STRING;
+use crate::yaml_dias::NumOrString;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ValueEnum)]
+#[derive(
+    Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ValueEnum,
+)]
 pub(crate) enum OutFormat {
     Form,
     Yaml,

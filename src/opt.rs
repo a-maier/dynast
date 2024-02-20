@@ -1,12 +1,12 @@
 use std::path::PathBuf;
 
-use anyhow::Result;
 use ahash::AHashMap;
+use anyhow::Result;
 use clap::Parser;
 
 use crate::symbol::Symbol;
 use crate::writer::OutFormat;
-use crate::{yaml_dias::NumOrString, momentum::Momentum};
+use crate::{momentum::Momentum, yaml_dias::NumOrString};
 
 /// Map diagrams onto topologies
 #[derive(Parser, Debug)]
@@ -24,7 +24,6 @@ pub(crate) struct Args {
     // Since clap requires `Display` to allow default values
     // we first privately parse an `Option` and make it available
     // as an actual map
-
     /// Replace masses
     #[clap(long, value_parser = parse_m_map)]
     replace_masses: Option<AHashMap<NumOrString, NumOrString>>,
@@ -40,7 +39,13 @@ pub(crate) struct Args {
     replace_momenta_actual: AHashMap<Symbol, Momentum>,
 
     /// Output format.
-    #[clap(short, long, value_enum, default_value = "yaml", alias = "outformat")]
+    #[clap(
+        short,
+        long,
+        value_enum,
+        default_value = "yaml",
+        alias = "outformat"
+    )]
     pub(crate) format: OutFormat,
 
     /// Output file. Print to standard output if absent.
@@ -81,8 +86,10 @@ fn parse_p_map(s: &str) -> Result<AHashMap<Symbol, Momentum>> {
 impl Args {
     pub(crate) fn parse() -> Args {
         let mut args = <Self as clap::Parser>::parse();
-        args.replace_masses_actual = args.replace_masses.take().unwrap_or_default();
-        args.replace_momenta_actual = args.replace_momenta.take().unwrap_or_default();
+        args.replace_masses_actual =
+            args.replace_masses.take().unwrap_or_default();
+        args.replace_momenta_actual =
+            args.replace_momenta.take().unwrap_or_default();
         args
     }
 

@@ -23,7 +23,16 @@ use crate::momentum::{Momentum, Term};
 use crate::symbol::Symbol;
 
 #[derive(
-    Clone, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Deserialize, Serialize,
+    Clone,
+    Default,
+    Debug,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Deserialize,
+    Serialize,
 )]
 #[serde(transparent)]
 pub struct Diagram {
@@ -133,13 +142,13 @@ impl TryFrom<Diagram> for UnGraph<Momentum, EdgeWeight> {
         use Denom::*;
 
         let propagators = Vec::from_iter(
-            dia.into_denominators().into_iter().filter_map(
-                |d| if let Prop(v1, v2, p, m) = d {
+            dia.into_denominators().into_iter().filter_map(|d| {
+                if let Prop(v1, v2, p, m) = d {
                     Some((v1, v2, p, m))
                 } else {
                     None
                 }
-            )
+            }),
         );
 
         let nprops = propagators.len();
@@ -193,17 +202,16 @@ fn momentum(input: &str) -> IResult<&str, Momentum> {
         )),
     ))(input)?;
     let sign = sign.unwrap_or(Plus);
-    let p = Momentum::from_iter(
-        once((sign, first_term))
-            .chain(terms)
-            .filter_map(|(s, term)| {
+    let p =
+        Momentum::from_iter(once((sign, first_term)).chain(terms).filter_map(
+            |(s, term)| {
                 if let Term(term) = term {
                     Some(if s == Minus { -term } else { term })
                 } else {
                     None
                 }
-            }),
-    );
+            },
+        ));
     Ok((rest, p))
 }
 
@@ -284,8 +292,10 @@ impl<'a> Display for FormatDia<'a> {
         )?;
         for den in &self.0.denominators {
             match den {
-                Prop(from, to, p, m) =>  writeln!(f, "      [({from}, {to}), {p}, {m}],")?,
-                Sp(p, m) =>  writeln!(f, "      [{p}, {m}],")?,
+                Prop(from, to, p, m) => {
+                    writeln!(f, "      [({from}, {to}), {p}, {m}],")?
+                }
+                Sp(p, m) => writeln!(f, "      [{p}, {m}],")?,
             }
         }
         writeln!(f, "   ],\n}}")

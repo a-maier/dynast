@@ -16,13 +16,11 @@ use serde::{Deserialize, Serialize};
     Serialize,
 )]
 #[serde(transparent)]
-pub struct Symbol (
-    math_symbols::Symbol
-);
+pub struct Symbol(math_symbols::Symbol);
 
 impl Symbol {
     pub fn new(name: &str) -> Self {
-        Self ( math_symbols::Symbol::new(name) )
+        Self(math_symbols::Symbol::new(name))
     }
 
     pub fn name(&self) -> String {

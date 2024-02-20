@@ -19,9 +19,7 @@ type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 type IndexSet<T> = indexmap::IndexSet<T, RandomState>;
 
 #[derive(Clone, Default, Debug, Eq, PartialEq)]
-pub struct Mapping (
-    pub IndexMap<Symbol, Momentum>
-);
+pub struct Mapping(pub IndexMap<Symbol, Momentum>);
 
 impl Display for Mapping {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -46,7 +44,7 @@ impl Display for MappingError {
                 "Sets of loop momenta differ: {{{}}} != {{{}}}",
                 join(&err.0, ", "),
                 join(&err.1, ", "),
-            )
+            ),
         }
     }
 }
@@ -57,7 +55,7 @@ impl Mapping {
             .into_iter()
             .map(|p| (p, p.into()))
             .collect();
-        Self ( map )
+        Self(map)
     }
 
     pub(crate) fn new(
@@ -70,7 +68,7 @@ impl Mapping {
         }
         debug_assert_eq!(from.graph.edge_count(), to.graph.edge_count());
         let mut ext_momenta = Vec::from_iter(
-            from.external_momenta.union(&to.external_momenta).copied()
+            from.external_momenta.union(&to.external_momenta).copied(),
         );
         ext_momenta.sort();
         let mut loop_momenta = extract_loop_momenta(from);
@@ -97,7 +95,9 @@ impl Mapping {
         );
 
         let mut shifts = Vec::new();
-        for (from, to) in from.graph.edge_references().zip(to.graph.edge_references()) {
+        for (from, to) in
+            from.graph.edge_references().zip(to.graph.edge_references())
+        {
             debug_assert_eq!(from.source(), to.source());
             debug_assert_eq!(from.target(), to.target());
             debug_assert_eq!(from.weight().m, to.weight().m);
@@ -156,7 +156,7 @@ impl Mapping {
             }
             map.insert(*lhs, rhs);
         }
-        Self ( map )
+        Self(map)
     }
 }
 
@@ -197,7 +197,9 @@ fn to_matrices(
             return (l, q, lp, qp);
         }
     }
-    unreachable!("Number of independent shifts cannot be smaller than number of loops")
+    unreachable!(
+        "Number of independent shifts cannot be smaller than number of loops"
+    )
 }
 
 struct CoeffExtract<'a> {
@@ -269,9 +271,7 @@ impl<'a> Ord for Shift<'a> {
     }
 }
 
-fn extract_loop_momenta(
-    g: &TopologyWithExtMom
-) -> IndexSet<Symbol> {
+fn extract_loop_momenta(g: &TopologyWithExtMom) -> IndexSet<Symbol> {
     let mut res = IndexSet::default();
     for w in g.graph.edge_weights() {
         for term in w.p.terms() {

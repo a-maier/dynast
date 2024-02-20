@@ -144,15 +144,15 @@ mod yaml_dias;
 mod yaml_doc_iter;
 
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Write, BufRead};
+use std::io::{BufRead, BufReader, BufWriter, Write};
 
-use ahash::{RandomState, AHashMap};
+use ahash::{AHashMap, RandomState};
 use anyhow::{anyhow, Context, Result};
 use env_logger::Env;
 use lazy_static::lazy_static;
 use log::{debug, info, trace};
 use nom::InputIter;
-use petgraph::{Graph, graph::UnGraph};
+use petgraph::{graph::UnGraph, Graph};
 use regex::bytes::Regex;
 
 use crate::form_input::FormDiaReader;
@@ -163,7 +163,7 @@ use crate::opt::Args;
 use crate::symbol::Symbol;
 use crate::version::VERSION_STRING;
 use crate::writer::{write, write_header};
-use crate::yaml_dias::{EdgeWeight, Diagram, NumOrString};
+use crate::yaml_dias::{Diagram, EdgeWeight, NumOrString};
 use crate::yaml_doc_iter::YamlDocIter;
 
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
@@ -175,9 +175,8 @@ fn main() -> Result<()> {
     info!("{}", &*VERSION_STRING);
 
     if let Some(filename) = &args.outfile {
-        let out = File::create(filename).with_context(
-            || format!("Trying to create {filename:?}")
-        )?;
+        let out = File::create(filename)
+            .with_context(|| format!("Trying to create {filename:?}"))?;
         let out = BufWriter::new(out);
         write_mappings(args, out)
     } else {
@@ -200,16 +199,18 @@ fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
         let file = File::open(filename)
             .with_context(|| format!("Failed to read {filename:?}"))?;
         let mut reader = BufReader::with_capacity(BUF_SIZE, file);
-        let in_format = get_format(&mut reader).with_context(||{
-            format!("Reading from {filename:?}")
-        })?;
-        if let Err(err) =  match in_format {
-            InFormat::Yaml => write_mappings_from_yaml(&mut mapper, reader, &mut out, &args),
-            InFormat::Form => write_mappings_from_form(&mut mapper, reader, &mut out, &args),
+        let in_format = get_format(&mut reader)
+            .with_context(|| format!("Reading from {filename:?}"))?;
+        if let Err(err) = match in_format {
+            InFormat::Yaml => {
+                write_mappings_from_yaml(&mut mapper, reader, &mut out, &args)
+            }
+            InFormat::Form => {
+                write_mappings_from_form(&mut mapper, reader, &mut out, &args)
+            }
         } {
-            return Err(err).with_context(|| {
-                format!("Reading from {filename:?}")
-            });
+            return Err(err)
+                .with_context(|| format!("Reading from {filename:?}"));
         }
     }
     Ok(())
@@ -219,7 +220,7 @@ fn write_mappings_from_yaml(
     mapper: &mut TopMapper<NumOrString>,
     reader: impl BufRead,
     mut out: impl Write,
-    args: &Args
+    args: &Args,
 ) -> Result<()> {
     for document in YamlDocIter::new(reader) {
         let document = document?;
@@ -259,7 +260,7 @@ fn write_mappings_from_form(
     mapper: &mut TopMapper<NumOrString>,
     reader: impl BufRead,
     mut out: impl Write,
-    args: &Args
+    args: &Args,
 ) -> Result<(), anyhow::Error> {
     for item in FormDiaReader::new(reader) {
         let (name, dia) = item?;
@@ -284,8 +285,9 @@ enum InFormat {
     Form,
 }
 
-lazy_static!{
-    static ref FORMAT_SPEC: Regex = Regex::new(r"dynast-format:\s*(\w+)").unwrap();
+lazy_static! {
+    static ref FORMAT_SPEC: Regex =
+        Regex::new(r"dynast-format:\s*(\w+)").unwrap();
 }
 
 fn get_format(reader: &mut impl BufRead) -> Result<InFormat> {
@@ -299,7 +301,7 @@ fn get_format(reader: &mut impl BufRead) -> Result<InFormat> {
         match format_str.as_str() {
             "form" => Ok(InFormat::Form),
             "yaml" => Ok(InFormat::Yaml),
-            _ => Err(anyhow!("Unknown input format: `{format_str}`"))
+            _ => Err(anyhow!("Unknown input format: `{format_str}`")),
         }
     } else {
         Ok(Default::default())
@@ -308,7 +310,7 @@ fn get_format(reader: &mut impl BufRead) -> Result<InFormat> {
 
 fn replace_masses(
     dia: Diagram,
-    replace_masses: &AHashMap<NumOrString, NumOrString>
+    replace_masses: &AHashMap<NumOrString, NumOrString>,
 ) -> Diagram {
     use yaml_dias::Denom::*;
     let mut dens = dia.into_denominators();
@@ -318,12 +320,12 @@ fn replace_masses(
                 if let Some(m_new) = replace_masses.get(m).cloned() {
                     *m = m_new;
                 }
-            },
+            }
             Sp(_, ref mut m) => {
                 if let Some(m_new) = replace_masses.get(m).cloned() {
                     *m = m_new;
                 }
-            },
+            }
         }
     }
     Diagram::new(dens)
@@ -331,7 +333,7 @@ fn replace_masses(
 
 fn replace_momenta(
     mut graph: UnGraph<Momentum, EdgeWeight>,
-    replace_momenta: &AHashMap<Symbol, Momentum>
+    replace_momenta: &AHashMap<Symbol, Momentum>,
 ) -> UnGraph<Momentum, EdgeWeight> {
     for p in graph.node_weights_mut() {
         *p = std::mem::take(p).replace(replace_momenta);

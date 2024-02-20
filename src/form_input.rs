@@ -5,11 +5,11 @@ use log::trace;
 use regex::Regex;
 use thiserror::Error;
 
-use crate::yaml_dias::{NumOrString, Diagram, Denom::Prop};
+use crate::yaml_dias::{Denom::Prop, Diagram, NumOrString};
 
 #[derive(Clone, Debug, Default)]
 pub(crate) struct FormDiaReader<R> {
-    reader: R
+    reader: R,
 }
 
 impl<R: BufRead> FormDiaReader<R> {
@@ -20,7 +20,7 @@ impl<R: BufRead> FormDiaReader<R> {
     fn read_dia(
         &mut self,
         name: String,
-        line: &mut String
+        line: &mut String,
     ) -> Result<(NumOrString, Diagram), FormReadError> {
         line.clear();
         let mut props = Vec::new();
@@ -29,7 +29,7 @@ impl<R: BufRead> FormDiaReader<R> {
             match read {
                 Err(err) => return Err(err.into()),
                 Ok(0) => return Err(FormReadError::UnfinishedDia(name)),
-                _ => { }
+                _ => {}
             };
             if FORM_FOLD_END.is_match(line) {
                 let name = if let Ok(num) = name.parse() {
@@ -51,17 +51,15 @@ impl<R: BufRead> FormDiaReader<R> {
             }
             line.clear()
         }
-
     }
 }
 
-lazy_static!{
+lazy_static! {
     static ref FORM_FOLD_START: Regex = Regex::new(r"^\*--#\[\s+(\w+):").unwrap();
     static ref FORM_FOLD_END: Regex = Regex::new(r"^\*--#\]\s+(\w+):").unwrap();
     static ref FORM_COMMENT_LINE: Regex = Regex::new(r"^\*").unwrap();
     static ref FORM_PROP: Regex = Regex::new(r"^\s*\*\s*prop\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\w+)\(\s*\d+\s*,\s*([^,\)]*)\s*\)\s*\)").unwrap();
 }
-
 
 impl<R: BufRead> Iterator for FormDiaReader<R> {
     type Item = Result<(NumOrString, Diagram), FormReadError>;
@@ -73,7 +71,7 @@ impl<R: BufRead> Iterator for FormDiaReader<R> {
             match read {
                 Err(err) => return Some(Err(err.into())),
                 Ok(0) => return None,
-                _ => { }
+                _ => {}
             };
             if let Some(caps) = FORM_FOLD_START.captures(&line) {
                 let name = caps[1].to_string();
@@ -92,5 +90,5 @@ pub enum FormReadError {
     #[error("Failed to parse vertex number in FORM propagator: {0}")]
     ParseVxNumErr(#[from] ParseIntError),
     #[error("Reached end of file while reading FORM diagram `{0}`")]
-    UnfinishedDia(String)
+    UnfinishedDia(String),
 }

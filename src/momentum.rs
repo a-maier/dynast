@@ -128,7 +128,7 @@ impl Momentum {
     /// same symbol.
     pub unsafe fn from_terms_unchecked(terms: Vec<Term>) -> Self {
         // TODO: assert!(terms.is_sorted()), no duplicate symbols
-        Self{terms}
+        Self { terms }
     }
 
     pub fn terms(&self) -> &[Term] {
@@ -525,7 +525,7 @@ impl<'a, S: BuildHasher> Replace<&'a AHashMap<Symbol, Momentum, S>> for Term {
     type Output = Momentum;
 
     fn replace(self, map: &'a AHashMap<Symbol, Momentum, S>) -> Self::Output {
-        let Term{ symbol, coeff } = self;
+        let Term { symbol, coeff } = self;
         coeff * symbol.replace(map)
     }
 }
@@ -534,7 +534,7 @@ impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Momentum, S>> for Term {
     type Output = Momentum;
 
     fn replace(self, map: &'a HashMap<Symbol, Momentum, S>) -> Self::Output {
-        let Term{ symbol, coeff } = self;
+        let Term { symbol, coeff } = self;
         coeff * symbol.replace(map)
     }
 }
@@ -543,41 +543,38 @@ impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Momentum, S>> for Term {
     type Output = Momentum;
 
     fn replace(self, map: &'a IndexMap<Symbol, Momentum, S>) -> Self::Output {
-        let Term{ symbol, coeff } = self;
+        let Term { symbol, coeff } = self;
         coeff * symbol.replace(map)
     }
 }
 
-impl<'a, S: BuildHasher> Replace<&'a AHashMap<Symbol, Momentum, S>> for Momentum {
+impl<'a, S: BuildHasher> Replace<&'a AHashMap<Symbol, Momentum, S>>
+    for Momentum
+{
     type Output = Momentum;
 
     fn replace(self, map: &'a AHashMap<Symbol, Momentum, S>) -> Self::Output {
-        self.into_terms()
-            .into_iter()
-            .map(|t| t.replace(map))
-            .sum()
+        self.into_terms().into_iter().map(|t| t.replace(map)).sum()
     }
 }
 
-impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Momentum, S>> for Momentum {
+impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Momentum, S>>
+    for Momentum
+{
     type Output = Momentum;
 
     fn replace(self, map: &'a HashMap<Symbol, Momentum, S>) -> Self::Output {
-        self.into_terms()
-            .into_iter()
-            .map(|t| t.replace(map))
-            .sum()
+        self.into_terms().into_iter().map(|t| t.replace(map)).sum()
     }
 }
 
-impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Momentum, S>> for Momentum {
+impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Momentum, S>>
+    for Momentum
+{
     type Output = Momentum;
 
     fn replace(self, map: &'a IndexMap<Symbol, Momentum, S>) -> Self::Output {
-        self.into_terms()
-            .into_iter()
-            .map(|t| t.replace(map))
-            .sum()
+        self.into_terms().into_iter().map(|t| t.replace(map)).sum()
     }
 }
 
