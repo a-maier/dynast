@@ -31,7 +31,7 @@ impl<R: BufRead> FormDiaReader<R> {
                 Ok(0) => return Err(FormReadError::UnfinishedDia(name)),
                 _ => { }
             };
-            if FORM_FOLD_END.is_match(&line) {
+            if FORM_FOLD_END.is_match(line) {
                 let name = if let Ok(num) = name.parse() {
                     NumOrString::Num(num)
                 } else {
@@ -40,7 +40,7 @@ impl<R: BufRead> FormDiaReader<R> {
                 let dia = Diagram::new(props);
                 return Ok((name, dia));
             }
-            if !FORM_COMMENT_LINE.is_match(&line) {
+            if !FORM_COMMENT_LINE.is_match(line) {
                 if let Some(caps) = FORM_PROP.captures(line) {
                     let from = caps[1].parse()?;
                     let to = caps[2].parse()?;

@@ -195,7 +195,7 @@ fn momentum(input: &str) -> IResult<&str, Momentum> {
     let sign = sign.unwrap_or(Plus);
     let p = Momentum::from_iter(
         once((sign, first_term))
-            .chain(terms.into_iter())
+            .chain(terms)
             .filter_map(|(s, term)| {
                 if let Term(term) = term {
                     Some(if s == Minus { -term } else { term })

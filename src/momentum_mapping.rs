@@ -255,17 +255,17 @@ impl<'a> std::fmt::Display for Shift<'a> {
 
 impl<'a> PartialOrd for Shift<'a> {
     fn partial_cmp(&self, other: &Shift) -> Option<Ordering> {
-        (self.lhs.terms().len(), &self.lhs, &self.rhs).partial_cmp(&(
-            other.lhs.terms().len(),
-            &other.lhs,
-            &other.rhs,
-        ))
+        Some(self.cmp(other))
     }
 }
 
 impl<'a> Ord for Shift<'a> {
     fn cmp(&self, other: &Shift) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        (self.lhs.terms().len(), &self.lhs, &self.rhs).cmp(&(
+            other.lhs.terms().len(),
+            &other.lhs,
+            &other.rhs,
+        ))
     }
 }
 
