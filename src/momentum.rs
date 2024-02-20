@@ -120,6 +120,11 @@ fn deserialize_terms<'de, D: Deserializer<'de>>(
 }
 
 impl Momentum {
+    pub unsafe fn from_terms_unchecked(terms: Vec<Term>) -> Self {
+        // TODO: assert!(terms.is_sorted()), no duplicate symbols
+        Self{terms}
+    }
+
     pub fn terms(&self) -> &[Term] {
         &self.terms
     }
@@ -130,6 +135,14 @@ impl Momentum {
 
     pub fn into_terms(self) -> Vec<Term> {
         self.terms
+    }
+
+    pub fn pop(&mut self) -> Option<Term> {
+        self.terms.pop()
+    }
+
+    pub fn len(&self) -> usize {
+        self.terms.len()
     }
 }
 
