@@ -123,7 +123,7 @@ impl Mapping {
         Ok(Self::from_matrices(&o, &s, &loop_momenta, &ext_momenta))
     }
 
-    fn from_matrices<R, C, S>(
+    pub fn from_matrices<R, C, S>(
         l: &Matrix<f64, R, C, S>,
         q: &Matrix<f64, R, C, S>,
         loop_momenta: &[Symbol],

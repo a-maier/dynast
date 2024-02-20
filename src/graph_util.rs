@@ -72,7 +72,7 @@ where
     into_transformed_nodes_edges(g, identity, identity)
 }
 
-pub(crate) fn from_nodes_edges<N, E, Ty, Ix>(
+pub fn from_nodes_edges<N, E, Ty, Ix>(
     nodes: Vec<N>,
     edges: Vec<(usize, usize, E)>,
 ) -> Graph<N, E, Ty, Ix>
