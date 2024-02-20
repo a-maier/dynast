@@ -76,8 +76,8 @@ impl Mapping {
         let mut loop_momenta = extract_loop_momenta(from);
         let mut to_loop_momenta = extract_loop_momenta(to);
         for q in &ext_momenta {
-            loop_momenta.remove(q);
-            to_loop_momenta.remove(q);
+            loop_momenta.swap_remove(q);
+            to_loop_momenta.swap_remove(q);
         }
         let loop_momenta = loop_momenta;
         let to_loop_momenta = to_loop_momenta;
