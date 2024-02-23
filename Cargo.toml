@@ -22,11 +22,9 @@ itertools = "0.12"
 lazy_static = "1.4"
 log = "0.4"
 math-symbols = "0.1"
-memmap = "0.7"
 nalgebra = "0.32"
 nauty-pet = { version = "0.12", features = ["stable"] }
 nom = "7"
-num-rational = { version = "0.4", features = ["serde"] }
 num-traits = "0.2"
 petgraph = "0.6"
 regex = "1.7"
