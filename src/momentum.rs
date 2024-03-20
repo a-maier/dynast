@@ -578,6 +578,87 @@ impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Momentum, S>>
     }
 }
 
+impl<'a, S: BuildHasher> Replace<&'a AHashMap<Symbol, Symbol, S>> for Symbol {
+    type Output = Symbol;
+
+    fn replace(self, map: &'a AHashMap<Symbol, Symbol, S>) -> Self::Output {
+        map.get(&self).copied().unwrap_or(self)
+    }
+}
+
+impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Symbol, S>> for Symbol {
+    type Output = Symbol;
+
+    fn replace(self, map: &'a HashMap<Symbol, Symbol, S>) -> Self::Output {
+        map.get(&self).copied().unwrap_or(self)
+    }
+}
+
+impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Symbol, S>> for Symbol {
+    type Output = Symbol;
+
+    fn replace(self, map: &'a IndexMap<Symbol, Symbol, S>) -> Self::Output {
+        map.get(&self).copied().unwrap_or(self)
+    }
+}
+
+impl<'a, S: BuildHasher> Replace<&'a AHashMap<Symbol, Symbol, S>> for Term {
+    type Output = Term;
+
+    fn replace(mut self, map: &'a AHashMap<Symbol, Symbol, S>) -> Self::Output {
+        self.symbol = self.symbol.replace(map);
+        self
+    }
+}
+
+impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Symbol, S>> for Term {
+    type Output = Term;
+
+    fn replace(mut self, map: &'a HashMap<Symbol, Symbol, S>) -> Self::Output {
+        self.symbol = self.symbol.replace(map);
+        self
+    }
+}
+
+impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Symbol, S>> for Term {
+    type Output = Term;
+
+    fn replace(mut self, map: &'a IndexMap<Symbol, Symbol, S>) -> Self::Output {
+        self.symbol = self.symbol.replace(map);
+        self
+    }
+}
+
+impl<'a, S: BuildHasher> Replace<&'a AHashMap<Symbol, Symbol, S>>
+    for Momentum
+{
+    type Output = Momentum;
+
+    fn replace(self, map: &'a AHashMap<Symbol, Symbol, S>) -> Self::Output {
+        self.into_terms().into_iter().map(|t| t.replace(map)).collect()
+    }
+}
+
+impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Symbol, S>>
+    for Momentum
+{
+    type Output = Momentum;
+
+    fn replace(self, map: &'a HashMap<Symbol, Symbol, S>) -> Self::Output {
+        self.into_terms().into_iter().map(|t| t.replace(map)).collect()
+    }
+}
+
+impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Symbol, S>>
+    for Momentum
+{
+    type Output = Momentum;
+
+    fn replace(self, map: &'a IndexMap<Symbol, Symbol, S>) -> Self::Output {
+        self.into_terms().into_iter().map(|t| t.replace(map)).collect()
+    }
+}
+
 impl Replace<(Symbol, Momentum)> for Momentum {
     type Output = Momentum;
 
@@ -589,6 +670,21 @@ impl Replace<(Symbol, Momentum)> for Momentum {
             // TODO: use fused multiply add?
             rhs *= coeff;
             self += rhs;
+        }
+        self
+    }
+}
+
+impl Replace<(Symbol, Symbol)> for Momentum {
+    type Output = Momentum;
+
+    fn replace(mut self, repl: (Symbol, Symbol)) -> Self::Output {
+        let (lhs, rhs) = repl;
+        let pos = self.terms().binary_search_by_key(&lhs, |t| t.symbol());
+        if let Ok(pos) = pos {
+            let mut t = self.terms.remove(pos);
+            t.symbol = rhs;
+            self += t;
         }
         self
     }
