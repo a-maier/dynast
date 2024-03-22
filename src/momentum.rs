@@ -629,33 +629,36 @@ impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Symbol, S>> for Term {
     }
 }
 
-impl<'a, S: BuildHasher> Replace<&'a AHashMap<Symbol, Symbol, S>>
-    for Momentum
-{
+impl<'a, S: BuildHasher> Replace<&'a AHashMap<Symbol, Symbol, S>> for Momentum {
     type Output = Momentum;
 
     fn replace(self, map: &'a AHashMap<Symbol, Symbol, S>) -> Self::Output {
-        self.into_terms().into_iter().map(|t| t.replace(map)).collect()
+        self.into_terms()
+            .into_iter()
+            .map(|t| t.replace(map))
+            .collect()
     }
 }
 
-impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Symbol, S>>
-    for Momentum
-{
+impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Symbol, S>> for Momentum {
     type Output = Momentum;
 
     fn replace(self, map: &'a HashMap<Symbol, Symbol, S>) -> Self::Output {
-        self.into_terms().into_iter().map(|t| t.replace(map)).collect()
+        self.into_terms()
+            .into_iter()
+            .map(|t| t.replace(map))
+            .collect()
     }
 }
 
-impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Symbol, S>>
-    for Momentum
-{
+impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Symbol, S>> for Momentum {
     type Output = Momentum;
 
     fn replace(self, map: &'a IndexMap<Symbol, Symbol, S>) -> Self::Output {
-        self.into_terms().into_iter().map(|t| t.replace(map)).collect()
+        self.into_terms()
+            .into_iter()
+            .map(|t| t.replace(map))
+            .collect()
     }
 }
 
