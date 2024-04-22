@@ -148,6 +148,7 @@ use std::io::{BufRead, BufReader, BufWriter, Write};
 
 use ahash::{AHashMap, RandomState};
 use anyhow::{anyhow, Context, Result};
+use biconnected_components::SplitIntoBcc;
 use env_logger::Env;
 use lazy_static::lazy_static;
 use log::{debug, info, trace};
@@ -162,7 +163,7 @@ use crate::momentum::{Momentum, Replace};
 use crate::opt::Args;
 use crate::symbol::Symbol;
 use crate::version::VERSION_STRING;
-use crate::writer::{write, write_header};
+use crate::writer::{write, write_header, write_factorising};
 use crate::yaml_dias::{Diagram, EdgeWeight, NumOrString};
 use crate::yaml_doc_iter::YamlDocIter;
 
@@ -274,10 +275,23 @@ fn write_mappings_with(
     trace!("After replacing masses: {}", dia.format());
     let graph = Graph::try_from(dia)?;
     let graph = replace_momenta(graph, args.replace_momenta());
-    let (topname, map) = mapper
-        .map_graph(name.clone(), graph)
+    let graphs = graph.split_into_bcc();
+    if graphs.len() == 1 {
+        let mut graphs = graphs;
+        let (topname, map) = mapper
+        .map_graph(name.clone(), graphs.pop().unwrap())
         .with_context(|| format!("Mapping diagram {name}"))?;
-    write(&mut out, &name, &topname, &map, args.format)?;
+        write(&mut out, &name, &topname, &map, args.format)?;
+    } else {
+        let mut map = Vec::new();
+        for (n, graph) in graphs.into_iter().enumerate() {
+            let sub_map = mapper
+                .map_graph(format!("{name}_subgraph{n}").into(), graph)
+                .with_context(|| format!("Mapping diagram {name}, subgraph {n}"))?;
+            map.push(sub_map);
+        }
+        write_factorising(&mut out, &name, &map, args.format)?;
+    }
     Ok(())
 }
 

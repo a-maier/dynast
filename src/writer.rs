@@ -39,6 +39,43 @@ pub(crate) fn write(
     }
 }
 
+pub(crate) fn write_factorising(
+    mut out: impl Write,
+    name: &NumOrString,
+    map: &[(NumOrString, Mapping)],
+    format: OutFormat,
+) -> Result<(), Error> {
+    use OutFormat::*;
+    match format {
+        Form => {
+            if let NumOrString::Num(dia) = name {
+                write!(
+                    out,
+                    "fill topology({dia}) = top({})",
+                    map.iter().map(|(n, _)| n).join(", ")
+                )?;
+                for (n, map) in map.iter().map(|(_, m)| m).enumerate() {
+                    write!(
+                        out,
+                        "*replace({n}, {})",
+                        map.0.iter().map(|(s, p)| format!("{s}, {p}")).join(", ")
+                    )?;
+                }
+                writeln!(out, ";")
+            } else {
+                Ok(())
+            }
+        }
+        Yaml => {
+            writeln!(out, "{name}:")?;
+            for (top, map) in map {
+                writeln!(out, " - [{top}, {map}]")?
+            }
+            Ok(())
+        },
+    }
+}
+
 pub(crate) fn write_header(
     mut out: impl Write,
     format: OutFormat,
