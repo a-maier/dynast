@@ -242,15 +242,7 @@ fn write_mappings_from_yaml(
             }
         };
         for (name, dia) in dias {
-            debug!("Read {name}: {}", dia.format());
-            let dia = replace_masses(dia, args.replace_masses());
-            trace!("After replacing masses: {}", dia.format());
-            let graph = Graph::try_from(dia)?;
-            let graph = replace_momenta(graph, args.replace_momenta());
-            let (topname, map) = mapper
-                .map_graph(name.clone(), graph)
-                .with_context(|| format!("Mapping diagram {name}"))?;
-            write(&mut out, &name, &topname, &map, args.format)?;
+            write_mappings_with(mapper, name, dia, &mut out, args)?;
         }
     }
     Ok(())
@@ -265,16 +257,27 @@ fn write_mappings_from_form(
     for item in FormDiaReader::new(reader) {
         let (name, dia) = item?;
         // TODO: code duplication
-        debug!("Read {name}: {}", dia.format());
-        let dia = replace_masses(dia, args.replace_masses());
-        trace!("After replacing masses: {}", dia.format());
-        let graph = Graph::try_from(dia)?;
-        let graph = replace_momenta(graph, args.replace_momenta());
-        let (topname, map) = mapper
-            .map_graph(name.clone(), graph)
-            .with_context(|| format!("Mapping diagram {name}"))?;
-        write(&mut out, &name, &topname, &map, args.format)?;
+        write_mappings_with(mapper, name, dia, &mut out, args)?;
     }
+    Ok(())
+}
+
+fn write_mappings_with(
+    mapper: &mut TopMapper<NumOrString>,
+    name: NumOrString,
+    dia: Diagram,
+    mut out: impl Write,
+    args: &Args,
+) -> Result<(), anyhow::Error> {
+    debug!("Read {name}: {}", dia.format());
+    let dia = replace_masses(dia, args.replace_masses());
+    trace!("After replacing masses: {}", dia.format());
+    let graph = Graph::try_from(dia)?;
+    let graph = replace_momenta(graph, args.replace_momenta());
+    let (topname, map) = mapper
+        .map_graph(name.clone(), graph)
+        .with_context(|| format!("Mapping diagram {name}"))?;
+    write(&mut out, &name, &topname, &map, args.format)?;
     Ok(())
 }
 
