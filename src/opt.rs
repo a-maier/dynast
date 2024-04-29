@@ -48,6 +48,10 @@ pub(crate) struct Args {
     )]
     pub(crate) format: OutFormat,
 
+    /// Whether to decompose integrals into one-particle-irreducible factors.
+    #[clap(long, alias = "1PI")]
+    pub(crate) factors: bool,
+
     /// Output file. Print to standard output if absent.
     #[clap(short, long)]
     pub(crate) outfile: Option<PathBuf>,

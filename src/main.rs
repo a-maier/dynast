@@ -275,14 +275,8 @@ fn write_mappings_with(
     trace!("After replacing masses: {}", dia.format());
     let graph = Graph::try_from(dia)?;
     let graph = replace_momenta(graph, args.replace_momenta());
-    let graphs = graph.split_into_bcc();
-    if graphs.len() == 1 {
-        let mut graphs = graphs;
-        let (topname, map) = mapper
-        .map_graph(name.clone(), graphs.pop().unwrap())
-        .with_context(|| format!("Mapping diagram {name}"))?;
-        write(&mut out, &name, &topname, &map, args.format)?;
-    } else {
+    if args.factors {
+        let graphs = graph.split_into_bcc();
         let mut map = Vec::new();
         for (n, graph) in graphs.into_iter().enumerate() {
             let sub_map = mapper
@@ -291,6 +285,11 @@ fn write_mappings_with(
             map.push(sub_map);
         }
         write_factorising(&mut out, &name, &map, args.format)?;
+    } else {
+        let (topname, map) = mapper
+        .map_graph(name.clone(), graph)
+        .with_context(|| format!("Mapping diagram {name}"))?;
+        write(&mut out, &name, &topname, &map, args.format)?;
     }
     Ok(())
 }
