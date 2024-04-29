@@ -71,24 +71,27 @@ impl Mapping {
             from.external_momenta.union(&to.external_momenta).copied(),
         );
         ext_momenta.sort();
-        let mut loop_momenta = extract_loop_momenta(from);
+        let mut from_loop_momenta = extract_loop_momenta(from);
         let mut to_loop_momenta = extract_loop_momenta(to);
         for q in &ext_momenta {
-            loop_momenta.swap_remove(q);
+            from_loop_momenta.swap_remove(q);
             to_loop_momenta.swap_remove(q);
         }
-        let loop_momenta = loop_momenta;
-        let to_loop_momenta = to_loop_momenta;
-        if loop_momenta != to_loop_momenta {
+        if from_loop_momenta.len() != to_loop_momenta.len() {
             return Err(MappingError::MomentumMismatch(Box::new((
-                loop_momenta,
+                from_loop_momenta,
                 to_loop_momenta,
             ))));
         }
-        let mut loop_momenta = Vec::from_iter(loop_momenta);
-        loop_momenta.sort();
-        let loop_momentum_pos = IndexMap::from_iter(
-            loop_momenta.iter().enumerate().map(|(n, p)| (*p, n)),
+        let mut from_loop_momenta = Vec::from_iter(from_loop_momenta);
+        from_loop_momenta.sort();
+        let mut to_loop_momenta = Vec::from_iter(to_loop_momenta);
+        to_loop_momenta.sort();
+        let from_loop_momentum_pos = IndexMap::from_iter(
+            from_loop_momenta.iter().enumerate().map(|(n, p)| (*p, n)),
+        );
+        let to_loop_momentum_pos = IndexMap::from_iter(
+            to_loop_momenta.iter().enumerate().map(|(n, p)| (*p, n)),
         );
         let ext_momentum_pos = IndexMap::from_iter(
             ext_momenta.iter().enumerate().map(|(n, p)| (*p, n)),
@@ -109,7 +112,12 @@ impl Mapping {
         }
 
         let (l, q, lp, qp) =
-            to_matrices(&shifts, &loop_momentum_pos, &ext_momentum_pos);
+            to_matrices(
+                &shifts,
+                &from_loop_momentum_pos,
+                &to_loop_momentum_pos,
+                &ext_momentum_pos
+            );
 
         trace!("{l} * l + {q} * q -> {lp} * l + {qp} * q");
 
@@ -120,13 +128,14 @@ impl Mapping {
         debug_assert_eq!(lp, &l * &o);
         debug_assert_eq!(qp, &l * &s + &q);
 
-        Ok(Self::from_matrices(&o, &s, &loop_momenta, &ext_momenta))
+        Ok(Self::from_matrices(&o, &s, &from_loop_momenta, &to_loop_momenta, &ext_momenta))
     }
 
     pub fn from_matrices<R, C, S>(
         l: &Matrix<f64, R, C, S>,
         q: &Matrix<f64, R, C, S>,
-        loop_momenta: &[Symbol],
+        from_loop_momenta: &[Symbol],
+        to_loop_momenta: &[Symbol],
         ext_momenta: &[Symbol],
     ) -> Self
     where
@@ -134,15 +143,15 @@ impl Mapping {
         R: Dim,
         S: RawStorage<f64, R, C>,
     {
-        debug_assert_eq!(l.ncols(), loop_momenta.len());
-        debug_assert_eq!(l.nrows(), l.ncols());
+        debug_assert_eq!(l.ncols(), to_loop_momenta.len());
+        debug_assert_eq!(l.nrows(), from_loop_momenta.len());
         debug_assert_eq!(l.nrows(), q.nrows());
         debug_assert_eq!(q.ncols(), ext_momenta.len());
         let mut map = IndexMap::default();
-        let rows = izip!(loop_momenta, l.row_iter(), q.row_iter());
+        let rows = izip!(from_loop_momenta, l.row_iter(), q.row_iter());
         for (lhs, lrow, qrow) in rows {
             let mut rhs = Momentum::zero();
-            for (coeff, p) in lrow.iter().zip(loop_momenta.iter()) {
+            for (coeff, p) in lrow.iter().zip(to_loop_momenta.iter()) {
                 let coeff = *coeff as i32;
                 if coeff != 0 {
                     rhs += Term::new(coeff, *p);
@@ -171,8 +180,10 @@ impl IntoIterator for Mapping {
 fn to_matrices(
     shifts: &[Shift],
     lpos: &IndexMap<Symbol, usize>,
+    lppos: &IndexMap<Symbol, usize>,
     qpos: &IndexMap<Symbol, usize>,
 ) -> (DMatrix<f64>, DMatrix<f64>, DMatrix<f64>, DMatrix<f64>) {
+    debug_assert_eq!(lpos.len(), lppos.len());
     let nloops = lpos.len();
     let next = qpos.len();
     let mut l = DMatrix::zeros(nloops, nloops);
@@ -180,10 +191,11 @@ fn to_matrices(
     let mut lp = DMatrix::zeros(nloops, nloops);
     let mut qp = DMatrix::zeros(nloops, next);
     let extr = CoeffExtract { lpos, qpos };
+    let extrp = CoeffExtract { lpos: lppos, qpos };
     let mut row = 0;
     for shift in shifts.iter() {
         extr.extract_into(shift.lhs, l.row_mut(row), q.row_mut(row));
-        extr.extract_into(shift.rhs, lp.row_mut(row), qp.row_mut(row));
+        extrp.extract_into(shift.rhs, lp.row_mut(row), qp.row_mut(row));
         row += 1;
         let rank = l.rows(0, row).rank(1e-10);
         if rank < row {
