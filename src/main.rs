@@ -131,6 +131,7 @@
 //! .end
 //! ```
 mod canon;
+mod dia_file_iter;
 mod form_input;
 mod graph_util;
 mod mapper;
@@ -144,30 +145,26 @@ mod yaml_dias;
 mod yaml_doc_iter;
 
 use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::io::{BufWriter, Write};
 
-use ahash::{AHashMap, RandomState};
-use anyhow::{anyhow, Context, Result};
+use ahash::AHashMap;
+use anyhow::{Context, Result};
 use biconnected_components::SplitIntoBcc;
 use env_logger::Env;
-use lazy_static::lazy_static;
-use log::{debug, info, trace};
-use nom::InputIter;
-use petgraph::{graph::UnGraph, Graph};
-use regex::bytes::Regex;
 
-use crate::form_input::FormDiaReader;
+use log::{debug, info, trace};
+use mapper::TopMapper;
+use petgraph::{graph::UnGraph, Graph};
+
+use crate::dia_file_iter::DiaFileIter;
+
 use crate::graph_util::Format;
-use crate::mapper::TopMapper;
 use crate::momentum::{Momentum, Replace};
 use crate::opt::Args;
 use crate::symbol::Symbol;
 use crate::version::VERSION_STRING;
 use crate::writer::{write, write_header, write_factorising};
 use crate::yaml_dias::{Diagram, EdgeWeight, NumOrString};
-use crate::yaml_doc_iter::YamlDocIter;
-
-type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 
 fn main() -> Result<()> {
     let args = Args::parse();
@@ -185,9 +182,7 @@ fn main() -> Result<()> {
     }
 }
 
-fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
-    const BUF_SIZE: usize = 8192;
-
+fn write_mappings(mut args: Args, mut out: impl Write) -> Result<()> {
     let mut mapper = TopMapper::new();
     mapper.add_subgraphs = args.subtopologies;
     mapper.keep_duplicate = args.keep_duplicate;
@@ -195,70 +190,10 @@ fn write_mappings(args: Args, mut out: impl Write) -> Result<()> {
     write_header(&mut out, args.format)
         .with_context(|| "Failed to write output header")?;
 
-    for filename in &args.infiles {
-        info!("Reading diagrams from {filename:?}");
-        let file = File::open(filename)
-            .with_context(|| format!("Failed to read {filename:?}"))?;
-        let mut reader = BufReader::with_capacity(BUF_SIZE, file);
-        let in_format = get_format(&mut reader)
-            .with_context(|| format!("Reading from {filename:?}"))?;
-        if let Err(err) = match in_format {
-            InFormat::Yaml => {
-                write_mappings_from_yaml(&mut mapper, reader, &mut out, &args)
-            }
-            InFormat::Form => {
-                write_mappings_from_form(&mut mapper, reader, &mut out, &args)
-            }
-        } {
-            return Err(err)
-                .with_context(|| format!("Reading from {filename:?}"));
-        }
-    }
-    Ok(())
-}
-
-fn write_mappings_from_yaml(
-    mapper: &mut TopMapper<NumOrString>,
-    reader: impl BufRead,
-    mut out: impl Write,
-    args: &Args,
-) -> Result<()> {
-    for document in YamlDocIter::new(reader) {
-        let document = document?;
-        trace!(
-            "yaml document:\n{}",
-            std::str::from_utf8(&document).unwrap()
-        );
-        let dias: Result<IndexMap<NumOrString, Diagram>, _> =
-            serde_yaml::from_slice(&document);
-        let dias = match dias {
-            Ok(dias) => dias,
-            Err(err) => {
-                // TODO: check for error type, but that is not accessible?!
-                if format!("{err:?}") == "EndOfStream" {
-                    continue;
-                } else {
-                    return Err(err.into());
-                }
-            }
-        };
-        for (name, dia) in dias {
-            write_mappings_with(mapper, name, dia, &mut out, args)?;
-        }
-    }
-    Ok(())
-}
-
-fn write_mappings_from_form(
-    mapper: &mut TopMapper<NumOrString>,
-    reader: impl BufRead,
-    mut out: impl Write,
-    args: &Args,
-) -> Result<(), anyhow::Error> {
-    for item in FormDiaReader::new(reader) {
+    let dias = DiaFileIter::try_from_files(std::mem::take(&mut args.infiles))?;
+    for item in dias {
         let (name, dia) = item?;
-        // TODO: code duplication
-        write_mappings_with(mapper, name, dia, &mut out, args)?;
+        write_mappings_with(&mut mapper, name, dia, &mut out, &args)?;
     }
     Ok(())
 }
@@ -292,36 +227,6 @@ fn write_mappings_with(
         write(&mut out, &name, &topname, &map, args.format)?;
     }
     Ok(())
-}
-
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
-enum InFormat {
-    #[default]
-    Yaml,
-    Form,
-}
-
-lazy_static! {
-    static ref FORMAT_SPEC: Regex =
-        Regex::new(r"dynast-format:\s*(\w+)").unwrap();
-}
-
-fn get_format(reader: &mut impl BufRead) -> Result<InFormat> {
-    let mut buf = reader.fill_buf()?;
-    if let Some(line_end) = buf.position(|b| b == b'\n') {
-        buf = &buf[..line_end];
-    }
-    if let Some(format) = FORMAT_SPEC.captures(buf) {
-        let format_str = std::str::from_utf8(&format[1])?;
-        let format_str = format_str.to_lowercase();
-        match format_str.as_str() {
-            "form" => Ok(InFormat::Form),
-            "yaml" => Ok(InFormat::Yaml),
-            _ => Err(anyhow!("Unknown input format: `{format_str}`")),
-        }
-    } else {
-        Ok(Default::default())
-    }
 }
 
 fn replace_masses(
