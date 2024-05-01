@@ -16,6 +16,18 @@ pub(crate) struct Args {
     #[clap(short, long)]
     pub(crate) subtopologies: bool,
 
+    /// Sort diagrams before processing them
+    ///
+    /// Diagrams are sorted by decreasing number of propagators, using
+    /// lexicographic ordering by name in case of ties. This option is
+    /// mostly useful in combination with `--subtopologies` to ensure
+    /// that a minimal set of topologies is selected. Note that in
+    /// contrast to standard settings, all diagrams have to be read
+    /// into memory, greatly increasing memory usage and delaying the
+    /// actual mapping onto topologies.
+    #[clap(short, long)]
+    pub(crate) sort: bool,
+
     /// Whether to keep multiple propagators with the same momentum
     #[clap(short, long)]
     pub(crate) keep_duplicate: bool,

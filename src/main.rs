@@ -191,9 +191,19 @@ fn write_mappings(mut args: Args, mut out: impl Write) -> Result<()> {
         .with_context(|| "Failed to write output header")?;
 
     let dias = DiaFileIter::try_from_files(std::mem::take(&mut args.infiles))?;
-    for item in dias {
-        let (name, dia) = item?;
-        write_mappings_with(&mut mapper, name, dia, &mut out, &args)?;
+
+    if args.sort {
+        let dias: Result<Vec<_>, _> = dias.collect();
+        let mut dias = dias?;
+        dias.sort_by(|a, b| b.1.denominators().len().cmp(&a.1.denominators().len()));
+        for (name, dia) in dias {
+            write_mappings_with(&mut mapper, name, dia, &mut out, &args)?;
+        }
+    } else {
+        for item in dias {
+            let (name, dia) = item?;
+            write_mappings_with(&mut mapper, name, dia, &mut out, &args)?;
+        }
     }
     Ok(())
 }
