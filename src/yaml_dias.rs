@@ -154,10 +154,9 @@ impl TryFrom<Diagram> for UnGraph<Momentum, EdgeWeight> {
         let nprops = propagators.len();
         let nvertices = propagators
             .iter()
-            .map(|(from, to, _, _)| max(*from, *to))
+            .map(|(from, to, _, _)| max(*from, *to) + 1)
             .max()
-            .unwrap()
-            + 1;
+            .unwrap_or(0);
         let mut res = UnGraph::with_capacity(nvertices as usize, nprops);
         for _ in 0..nvertices {
             res.add_node(Momentum::zero());
