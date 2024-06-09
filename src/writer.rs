@@ -55,11 +55,15 @@ pub(crate) fn write_factorising(
                     map.iter().map(|(n, _)| n).join(", ")
                 )?;
                 for (n, map) in map.iter().map(|(_, m)| m).enumerate() {
-                    write!(
-                        out,
-                        "*replace({n}, {})",
-                        map.0.iter().map(|(s, p)| format!("{s}, {p}")).join(", ")
-                    )?;
+                    if map.0.is_empty() {
+                        write!(out, "*replace({n})")?;
+                    } else {
+                        write!(
+                            out,
+                            "*replace({n}, {})",
+                            map.0.iter().map(|(s, p)| format!("{s}, {p}")).join(", ")
+                        )?;
+                    }
                 }
                 writeln!(out, ";")
             } else {
