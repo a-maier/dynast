@@ -227,7 +227,7 @@ fn write_mappings_with(
         let mut map = Vec::new();
         for (n, graph) in graphs.into_iter().enumerate() {
             let sub_map = mapper
-                .map_graph(format!("{name}_subgraph{n}").into(), graph)
+                .map_graph(format!("{name}subgraph{n}").into(), graph)
                 .with_context(|| format!("Mapping diagram {name}, subgraph {n}"))?;
             map.push(sub_map);
         }
