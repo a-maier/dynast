@@ -245,6 +245,7 @@ fn split_into_onepi(
     graph: UnGraph<Momentum, EdgeWeight>
 ) -> Vec<UnGraph<Momentum, EdgeWeight>> {
     let mut subgraphs = graph.split_into_bcc();
+    subgraphs.retain(|s| s.edge_count() > 0);
     for subgraph in &mut subgraphs {
         let mut p_vertex = vec![Momentum::zero(); subgraph.node_count()];
         for edge in subgraph.edge_references() {
