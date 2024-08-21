@@ -25,7 +25,7 @@ pub(crate) struct Args {
     /// contrast to standard settings, all diagrams have to be read
     /// into memory, greatly increasing memory usage and delaying the
     /// actual mapping onto topologies.
-    #[clap(short, long)]
+    #[clap(long)]
     pub(crate) sort: bool,
 
     /// Whether to keep multiple propagators with the same momentum
