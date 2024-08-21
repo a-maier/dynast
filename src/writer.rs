@@ -61,7 +61,10 @@ pub(crate) fn write_factorising(
                         write!(
                             out,
                             "*replace({n}, {})",
-                            map.0.iter().map(|(s, p)| format!("{s}, {p}")).join(", ")
+                            map.0
+                                .iter()
+                                .map(|(s, p)| format!("{s}, {p}"))
+                                .join(", ")
                         )?;
                     }
                 }
@@ -76,7 +79,7 @@ pub(crate) fn write_factorising(
                 writeln!(out, " - [{top}, {map}]")?
             }
             Ok(())
-        },
+        }
     }
 }
 

@@ -165,7 +165,7 @@ use crate::momentum::{Momentum, Replace};
 use crate::opt::Args;
 use crate::symbol::Symbol;
 use crate::version::VERSION_STRING;
-use crate::writer::{write, write_header, write_factorising};
+use crate::writer::{write, write_factorising, write_header};
 use crate::yaml_dias::{Diagram, EdgeWeight, NumOrString};
 
 fn main() -> Result<()> {
@@ -197,7 +197,9 @@ fn write_mappings(mut args: Args, mut out: impl Write) -> Result<()> {
     if args.sort {
         let dias: Result<Vec<_>, _> = dias.collect();
         let mut dias = dias?;
-        dias.sort_by(|a, b| b.1.denominators().len().cmp(&a.1.denominators().len()));
+        dias.sort_by(|a, b| {
+            b.1.denominators().len().cmp(&a.1.denominators().len())
+        });
         for (name, dia) in dias {
             write_mappings_with(&mut mapper, name, dia, &mut out, &args)?;
         }
@@ -228,21 +230,23 @@ fn write_mappings_with(
         for (n, graph) in graphs.into_iter().enumerate() {
             let sub_map = mapper
                 .map_graph(format!("{name}subgraph{n}").into(), graph)
-                .with_context(|| format!("Mapping diagram {name}, subgraph {n}"))?;
+                .with_context(|| {
+                    format!("Mapping diagram {name}, subgraph {n}")
+                })?;
             map.push(sub_map);
         }
         write_factorising(&mut out, &name, &map, args.format)?;
     } else {
         let (topname, map) = mapper
-        .map_graph(name.clone(), graph)
-        .with_context(|| format!("Mapping diagram {name}"))?;
+            .map_graph(name.clone(), graph)
+            .with_context(|| format!("Mapping diagram {name}"))?;
         write(&mut out, &name, &topname, &map, args.format)?;
     }
     Ok(())
 }
 
 fn split_into_onepi(
-    graph: UnGraph<Momentum, EdgeWeight>
+    graph: UnGraph<Momentum, EdgeWeight>,
 ) -> Vec<UnGraph<Momentum, EdgeWeight>> {
     let mut subgraphs = graph.split_into_bcc();
     subgraphs.retain(|s| s.edge_count() > 0);

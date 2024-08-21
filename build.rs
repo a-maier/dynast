@@ -9,7 +9,5 @@ fn main() {
     // If this is not run inside a git repository we get an error.
     // This happens when installing the crate via cargo.
     // As a quick fix, we just ignore it.
-     let _ = Emitter::default()
-        .add_instructions(&gitcl).unwrap()
-        .emit();
+    let _ = Emitter::default().add_instructions(&gitcl).unwrap().emit();
 }

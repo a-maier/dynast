@@ -53,18 +53,15 @@ impl<R: BufRead> FormDiaReader<R> {
     }
 }
 
-static FORM_FOLD_START: LazyLock<Regex> = LazyLock::new(||
-  Regex::new(r"^\*--#\[\s+(\w+):").unwrap()
-);
-static FORM_FOLD_END: LazyLock<Regex> = LazyLock::new(||
-    Regex::new(r"^\*--#\]\s+(\w+):").unwrap()
-);
-static FORM_COMMENT_LINE: LazyLock<Regex> = LazyLock::new(||
-    Regex::new(r"^\*").unwrap()
-);
-static FORM_PROP: LazyLock<Regex> = LazyLock::new(||
+static FORM_FOLD_START: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\*--#\[\s+(\w+):").unwrap());
+static FORM_FOLD_END: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\*--#\]\s+(\w+):").unwrap());
+static FORM_COMMENT_LINE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\*").unwrap());
+static FORM_PROP: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^\s*\*\s*prop\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\w+)\(\s*\d+\s*,\s*([^,\)]*)\s*\)\s*\)").unwrap()
-);
+});
 
 impl<R: BufRead> Iterator for FormDiaReader<R> {
     type Item = Result<(NumOrString, Diagram), FormReadError>;

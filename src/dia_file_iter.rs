@@ -5,9 +5,18 @@ use log::{info, trace};
 use nom::InputIter;
 use regex::bytes::Regex;
 
-use std::{fs::File, io::{BufRead, BufReader}, path::{Path, PathBuf}, sync::LazyLock};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    path::{Path, PathBuf},
+    sync::LazyLock,
+};
 
-use crate::{form_input::FormDiaReader, yaml_dias::{Diagram, NumOrString}, yaml_doc_iter::YamlDocIter};
+use crate::{
+    form_input::FormDiaReader,
+    yaml_dias::{Diagram, NumOrString},
+    yaml_doc_iter::YamlDocIter,
+};
 
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 
@@ -21,10 +30,7 @@ impl DiaFileIter {
     pub(crate) fn try_from_files(mut files: Vec<PathBuf>) -> Result<Self> {
         files.reverse();
         let current = files.last().map(DiaReader::try_new).transpose()?;
-        Ok(Self {
-            files,
-            current,
-        })
+        Ok(Self { files, current })
     }
 
     fn next_file(&mut self) -> Result<()> {
@@ -39,16 +45,18 @@ impl Iterator for DiaFileIter {
 
     fn next(&mut self) -> Option<Self::Item> {
         let Some(inner) = self.current.as_mut() else {
-            return None
+            return None;
         };
         let next = inner.next();
         if next.is_some() {
-            return next.map(|n| n.with_context(
-                || format!("Reading from {:?}", self.files.last().unwrap())
-            ));
+            return next.map(|n| {
+                n.with_context(|| {
+                    format!("Reading from {:?}", self.files.last().unwrap())
+                })
+            });
         };
         if let Err(err) = self.next_file() {
-            return Some(Err(err))
+            return Some(Err(err));
         }
         self.next()
     }
@@ -97,9 +105,8 @@ enum InFormat {
     Form,
 }
 
-static FORMAT_SPEC: LazyLock<Regex> = LazyLock::new(||
-        Regex::new(r"dynast-format:\s*(\w+)").unwrap()
-);
+static FORMAT_SPEC: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"dynast-format:\s*(\w+)").unwrap());
 
 fn get_format(reader: &mut impl BufRead) -> Result<InFormat> {
     let mut buf = reader.fill_buf()?;
@@ -158,9 +165,6 @@ impl YamlReader<BufReader<File>> {
     fn new(reader: BufReader<File>) -> Self {
         let reader = YamlDocIter::new(reader);
         let dia_cached = Vec::new();
-        Self {
-            reader,
-            dia_cached,
-        }
+        Self { reader, dia_cached }
     }
 }

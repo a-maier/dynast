@@ -111,13 +111,12 @@ impl Mapping {
             debug!("{shift}");
         }
 
-        let (l, q, lp, qp) =
-            to_matrices(
-                &shifts,
-                &from_loop_momentum_pos,
-                &to_loop_momentum_pos,
-                &ext_momentum_pos
-            );
+        let (l, q, lp, qp) = to_matrices(
+            &shifts,
+            &from_loop_momentum_pos,
+            &to_loop_momentum_pos,
+            &ext_momentum_pos,
+        );
 
         trace!("{l} * l + {q} * q -> {lp} * l + {qp} * q");
 
@@ -128,7 +127,13 @@ impl Mapping {
         debug_assert_eq!(lp, &l * &o);
         debug_assert_eq!(qp, &l * &s + &q);
 
-        Ok(Self::from_matrices(&o, &s, &from_loop_momenta, &to_loop_momenta, &ext_momenta))
+        Ok(Self::from_matrices(
+            &o,
+            &s,
+            &from_loop_momenta,
+            &to_loop_momenta,
+            &ext_momenta,
+        ))
     }
 
     pub fn from_matrices<R, C, S>(
