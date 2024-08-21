@@ -15,7 +15,7 @@ repository = "https://github.com/a-maier/dynast"
 ahash = { version = "0.8", features = ["serde"] }
 anyhow = "1.0"
 biconnected-components = "0.3.0"
-clap = { version = "4.3", features = ["derive"] }
+clap = { version = "4.5", features = ["derive"] }
 derivative = "2.2"
 env_logger = "0.11"
 indexmap = { version = "2.0", features = ["serde"] }
