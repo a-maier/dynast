@@ -1,6 +1,5 @@
-use std::{io::BufRead, num::ParseIntError};
+use std::{io::BufRead, num::ParseIntError, sync::LazyLock};
 
-use lazy_static::lazy_static;
 use log::trace;
 use regex::Regex;
 use thiserror::Error;
@@ -54,12 +53,18 @@ impl<R: BufRead> FormDiaReader<R> {
     }
 }
 
-lazy_static! {
-    static ref FORM_FOLD_START: Regex = Regex::new(r"^\*--#\[\s+(\w+):").unwrap();
-    static ref FORM_FOLD_END: Regex = Regex::new(r"^\*--#\]\s+(\w+):").unwrap();
-    static ref FORM_COMMENT_LINE: Regex = Regex::new(r"^\*").unwrap();
-    static ref FORM_PROP: Regex = Regex::new(r"^\s*\*\s*prop\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\w+)\(\s*\d+\s*,\s*([^,\)]*)\s*\)\s*\)").unwrap();
-}
+static FORM_FOLD_START: LazyLock<Regex> = LazyLock::new(||
+  Regex::new(r"^\*--#\[\s+(\w+):").unwrap()
+);
+static FORM_FOLD_END: LazyLock<Regex> = LazyLock::new(||
+    Regex::new(r"^\*--#\]\s+(\w+):").unwrap()
+);
+static FORM_COMMENT_LINE: LazyLock<Regex> = LazyLock::new(||
+    Regex::new(r"^\*").unwrap()
+);
+static FORM_PROP: LazyLock<Regex> = LazyLock::new(||
+    Regex::new(r"^\s*\*\s*prop\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\w+)\(\s*\d+\s*,\s*([^,\)]*)\s*\)\s*\)").unwrap()
+);
 
 impl<R: BufRead> Iterator for FormDiaReader<R> {
     type Item = Result<(NumOrString, Diagram), FormReadError>;

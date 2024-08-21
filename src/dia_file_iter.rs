@@ -1,12 +1,11 @@
 // TODO: proper error types
 use ahash::RandomState;
 use anyhow::{anyhow, Context, Result};
-use lazy_static::lazy_static;
 use log::{info, trace};
 use nom::InputIter;
 use regex::bytes::Regex;
 
-use std::{fs::File, io::{BufRead, BufReader}, path::{Path, PathBuf}};
+use std::{fs::File, io::{BufRead, BufReader}, path::{Path, PathBuf}, sync::LazyLock};
 
 use crate::{form_input::FormDiaReader, yaml_dias::{Diagram, NumOrString}, yaml_doc_iter::YamlDocIter};
 
@@ -98,10 +97,9 @@ enum InFormat {
     Form,
 }
 
-lazy_static! {
-    static ref FORMAT_SPEC: Regex =
-        Regex::new(r"dynast-format:\s*(\w+)").unwrap();
-}
+static FORMAT_SPEC: LazyLock<Regex> = LazyLock::new(||
+        Regex::new(r"dynast-format:\s*(\w+)").unwrap()
+);
 
 fn get_format(reader: &mut impl BufRead) -> Result<InFormat> {
     let mut buf = reader.fill_buf()?;
