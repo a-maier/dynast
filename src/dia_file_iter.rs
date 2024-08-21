@@ -44,9 +44,7 @@ impl Iterator for DiaFileIter {
     type Item = Result<(NumOrString, Diagram)>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let Some(inner) = self.current.as_mut() else {
-            return None;
-        };
+        let inner = self.current.as_mut()?;
         let next = inner.next();
         if next.is_some() {
             return next.map(|n| {
