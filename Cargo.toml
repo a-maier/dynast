@@ -19,11 +19,11 @@ clap = { version = "4.3", features = ["derive"] }
 derivative = "2.2"
 env_logger = "0.11"
 indexmap = { version = "2.0", features = ["serde"] }
-itertools = "0.12"
+itertools = "0.13"
 lazy_static = "1.4"
 log = "0.4"
 math-symbols = "0.1"
-nalgebra = "0.32"
+nalgebra = "0.33"
 nauty-pet = { version = "0.12", features = ["stable"] }
 nom = "7"
 num-traits = "0.2"
@@ -34,7 +34,7 @@ serde_yaml = "0.9"
 thiserror = "1.0"
 
 [build-dependencies]
-vergen = { version = "8", features = ["git", "gitcl"] }
+vergen-gitcl = "1.0"
 
 [lib]
 name = "dynast"
