@@ -4,8 +4,9 @@ use std::convert::identity;
 use std::fmt::{self, Display};
 use std::ops::AddAssign;
 
-use ahash::AHashSet;
+use ahash::{AHashSet, HashSet};
 use num_traits::Zero;
+use petgraph::visit::{depth_first_search, DfsEvent};
 use petgraph::{
     graph::{IndexType, UnGraph},
     visit::{EdgeRef, NodeIndexable},
@@ -212,4 +213,28 @@ fn norm_sign(p: &Momentum) -> Cow<'_, Momentum> {
         Some(t) if t.coeff() < 0 => Cow::Owned(-p.clone()),
         _ => Cow::Borrowed(p),
     }
+}
+
+pub fn contains_cycle<N, E, Ty: EdgeType, Ix: IndexType>(g: &Graph<N, E, Ty, Ix>) -> bool {
+    let mut nodes_not_visited: HashSet<_> = g.node_indices().collect();
+
+    while let Some(start) = nodes_not_visited.iter().copied().next() {
+        nodes_not_visited.remove(&start);
+        let res = depth_first_search(
+            g,
+            Some(start),
+            |ev| match ev {
+                DfsEvent::Discover(n, _) => {
+                    nodes_not_visited.remove(&n);
+                    Ok(())
+                },
+                DfsEvent::BackEdge(_, _) => Err(()),
+                _ => Ok(())
+            }
+        );
+        if res.is_err() {
+            return true;
+        }
+    }
+    false
 }

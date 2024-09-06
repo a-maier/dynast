@@ -4,7 +4,7 @@ use nauty_pet::prelude::*;
 use petgraph::{graph::UnGraph, Undirected};
 
 use crate::graph_util::{
-    contract_graph_edge, from_nodes_edges, into_nodes_edges, transform_nodes,
+    from_nodes_edges, into_nodes_edges, transform_nodes,
     Format,
 };
 use crate::momentum::Momentum;
@@ -76,11 +76,4 @@ fn relabel_nodes(
     edges.sort();
     apply_perm(&mut nodes, relabel);
     from_nodes_edges(nodes, edges)
-}
-
-pub(crate) fn contract_edge(
-    g: CanonGraph<Momentum, EdgeWeight, Undirected>,
-    idx: usize,
-) -> CanonGraph<Momentum, EdgeWeight, Undirected> {
-    into_canon(contract_graph_edge(g.into(), idx))
 }

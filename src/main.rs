@@ -149,18 +149,14 @@ use std::io::{BufWriter, Write};
 
 use ahash::AHashMap;
 use anyhow::{Context, Result};
-use biconnected_components::SplitIntoBcc;
 use env_logger::Env;
 
 use log::{debug, info, trace};
-use mapper::TopMapper;
-use num_traits::Zero;
-use petgraph::visit::{EdgeRef, NodeIndexable};
 use petgraph::{graph::UnGraph, Graph};
 
 use crate::dia_file_iter::DiaFileIter;
-
 use crate::graph_util::Format;
+use crate::mapper::{into_factors, TopMapper};
 use crate::momentum::{Momentum, Replace};
 use crate::opt::Args;
 use crate::symbol::Symbol;
@@ -225,7 +221,7 @@ fn write_mappings_with(
     let graph = Graph::try_from(dia)?;
     let graph = replace_momenta(graph, args.replace_momenta());
     if args.factors {
-        let graphs = split_into_onepi(graph);
+        let graphs = into_factors(graph);
         let mut map = Vec::new();
         for (n, graph) in graphs.into_iter().enumerate() {
             let sub_map = mapper
@@ -243,26 +239,6 @@ fn write_mappings_with(
         write(&mut out, &name, &topname, &map, args.format)?;
     }
     Ok(())
-}
-
-fn split_into_onepi(
-    graph: UnGraph<Momentum, EdgeWeight>,
-) -> Vec<UnGraph<Momentum, EdgeWeight>> {
-    let mut subgraphs = graph.split_into_bcc();
-    subgraphs.retain(|s| s.edge_count() > 0);
-    for subgraph in &mut subgraphs {
-        let mut p_vertex = vec![Momentum::zero(); subgraph.node_count()];
-        for edge in subgraph.edge_references() {
-            let p = &edge.weight().p;
-            p_vertex[edge.source().index()] -= p;
-            p_vertex[edge.target().index()] += p;
-        }
-        for (n, p) in p_vertex.into_iter().enumerate() {
-            let n = subgraph.from_index(n);
-            *subgraph.node_weight_mut(n).unwrap() = p;
-        }
-    }
-    subgraphs
 }
 
 fn replace_masses(
