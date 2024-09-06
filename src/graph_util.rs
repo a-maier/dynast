@@ -4,9 +4,9 @@ use std::convert::identity;
 use std::fmt::{self, Display};
 use std::ops::AddAssign;
 
-use ahash::{AHashSet, HashSet};
+use ahash::{AHashSet, AHashMap};
 use num_traits::Zero;
-use petgraph::visit::{depth_first_search, DfsEvent};
+use petgraph::prelude::NodeIndex;
 use petgraph::{
     graph::{IndexType, UnGraph},
     visit::{EdgeRef, NodeIndexable},
@@ -215,26 +215,91 @@ fn norm_sign(p: &Momentum) -> Cow<'_, Momentum> {
     }
 }
 
-pub fn contains_cycle<N, E, Ty: EdgeType, Ix: IndexType>(g: &Graph<N, E, Ty, Ix>) -> bool {
-    let mut nodes_not_visited: HashSet<_> = g.node_indices().collect();
+pub fn contains_cycle<N, E, Ix: IndexType>(g: &UnGraph<N, E, Ix>) -> bool {
+    // need to do a manual DFS because the petgraph one uses edges
+    // twice in an undirected graph
 
-    while let Some(start) = nodes_not_visited.iter().copied().next() {
-        nodes_not_visited.remove(&start);
-        let res = depth_first_search(
-            g,
-            Some(start),
-            |ev| match ev {
-                DfsEvent::Discover(n, _) => {
-                    nodes_not_visited.remove(&n);
-                    Ok(())
-                },
-                DfsEvent::BackEdge(_, _) => Err(()),
-                _ => Ok(())
-            }
-        );
-        if res.is_err() {
+    fn insert_edge<Ix: IndexType>(
+        adjacent_to: &mut AHashMap<NodeIndex<Ix>, AHashSet<NodeIndex<Ix>>>,
+        source: NodeIndex<Ix>,
+        target: NodeIndex<Ix>,
+    ) -> bool {
+        adjacent_to.entry(source)
+            .or_default()
+            .insert(target)
+            && adjacent_to.entry(target)
+            .or_default()
+            .insert(source)
+    }
+
+    fn remove_edge<Ix: IndexType>(
+        adjacent_to: &mut AHashMap<NodeIndex<Ix>, AHashSet<NodeIndex<Ix>>>,
+        source: &NodeIndex<Ix>,
+        target: &NodeIndex<Ix>,
+    ) -> bool {
+        adjacent_to.get_mut(source).unwrap().remove(target)
+            && adjacent_to.get_mut(target).unwrap().remove(source)
+    }
+
+    let mut adjacent_to: AHashMap<_, AHashSet<_>> = AHashMap::new();
+    for edge in g.edge_references() {
+        if !insert_edge(&mut adjacent_to, edge.source(), edge.target()) {
+            // we have seen an edge source <-> target before,
+            // so there is a cycle
             return true;
         }
     }
+    let mut remaining_nodes: AHashSet<_> = g.node_indices().collect();
+    let mut visited_nodes = AHashSet::new();
+    let mut edge_stack = Vec::new();
+
+    while let Some(start) = remaining_nodes.iter().copied().next() {
+        let removed = remaining_nodes.remove(&start);
+        debug_assert!(removed);
+        let new_visited = visited_nodes.insert(start);
+        debug_assert!(new_visited);
+        if let Some(adjacent) = adjacent_to.get(&start) {
+            edge_stack.extend(adjacent.iter().map(|t| (start, *t)));
+        }
+        while let Some((current, next)) = edge_stack.pop() {
+            let new_visited = visited_nodes.insert(next);
+            if !new_visited {
+                return true;
+            }
+            let removed = remove_edge(&mut adjacent_to, &current, &next);
+            debug_assert!(removed);
+            let removed = remaining_nodes.remove(&next);
+            debug_assert!(removed);
+            if let Some(adjacent) = adjacent_to.get(&next) {
+                edge_stack.extend(adjacent.iter().map(|t| (current, *t)));
+            }
+        }
+    }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn log_init() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
+
+    #[test]
+    fn cycle() {
+        log_init();
+
+        let g = UnGraph::<(), i32>::from_edges(&[(0, 1)]);
+        assert!(!contains_cycle(&g));
+
+        let g = UnGraph::<(), i32>::from_edges(&[(0, 1), (1, 0)]);
+        assert!(contains_cycle(&g));
+
+        let g = UnGraph::<(), i32>::from_edges(&[(0, 1), (2, 3)]);
+        assert!(!contains_cycle(&g));
+
+        let g = UnGraph::<(), i32>::from_edges(&[(0, 1), (2, 3), (3, 4), (4, 2)]);
+        assert!(contains_cycle(&g));
+    }
 }
