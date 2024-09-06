@@ -5,17 +5,14 @@ use ahash::RandomState;
 use itertools::{izip, join, Itertools};
 use log::{debug, trace};
 use nalgebra::{DMatrix, Dim, Matrix, MatrixViewMut, RawStorage, U1};
-use nauty_pet::graph::CanonGraph;
 use num_traits::Zero;
-use petgraph::Undirected;
-use petgraph::{graph::UnGraph, visit::EdgeRef};
+use petgraph::visit::EdgeRef;
 use thiserror::Error;
 
 use crate::graph_util::Format;
 use crate::mapper::TopologyWithExtMom;
 use crate::momentum::{Momentum, Term};
 use crate::symbol::Symbol;
-use crate::yaml_dias::EdgeWeight;
 
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 type IndexSet<T> = indexmap::IndexSet<T, RandomState>;
@@ -35,8 +32,7 @@ impl Display for Mapping {
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum MappingError {
-    MomentumMismatch(Box<(IndexSet<Symbol>, IndexSet<Symbol>)>),
-    SubgraphMismatch(usize, usize),
+    MomentumMismatch(Box<(IndexSet<Symbol>, IndexSet<Symbol>)>)
 }
 
 impl Display for MappingError {
@@ -47,75 +43,43 @@ impl Display for MappingError {
                 "Sets of loop momenta differ: {{{}}} != {{{}}}",
                 join(&err.0, ", "),
                 join(&err.1, ", "),
-            ),
-            MappingError::SubgraphMismatch(from, to) => write!(
-                f,
-                "Number of subgraphs differ: {from} != {to}"
-            ),
+            )
         }
     }
 }
 
 impl Mapping {
     pub(crate) fn identity(g: &TopologyWithExtMom) -> Self {
-        let map = g.subgraphs().iter()
-            .flat_map(|g| extract_momenta(g))
-            .filter_map(|p| if g.external_momenta.contains(&p) {
-                None
-            } else {
-                Some((p, p.into()))
-            })
-            .collect();
-        Self(map)
+        let map = extract_loop_momenta(g)
+            .into_iter()
+            .map(|p| (p, p.into()));
+        Self(map.collect())
     }
 
     pub(crate) fn new(
         from: &TopologyWithExtMom,
         to: &TopologyWithExtMom,
     ) -> Result<Self, MappingError> {
-        if from.subgraphs().len() != to.subgraphs().len() {
-            return Err(MappingError::SubgraphMismatch(from.subgraphs().len(), to.subgraphs().len()));
+        debug!(
+            "Mapping {} onto {}",
+            from.subgraphs().iter().map(|g| g.format()).join("\n"),
+            to.subgraphs().iter().map(|g| g.format()).join("\n")
+        );
+        debug_assert_eq!(from.subgraphs().len(), to.subgraphs().len());
+        debug_assert!(
+            from.subgraphs().iter().zip(to.subgraphs())
+                .all(|(from, to)| from.edge_count() == to.edge_count())
+        );
+        if !shift_needed(&from, &to) {
+            return Ok(Self::identity(from));
         }
-
         let mut ext_momenta = Vec::from_iter(
             from.external_momenta.union(&to.external_momenta).copied(),
         );
         ext_momenta.sort();
-
-        let mut res = Self::default();
-        for (from, to) in from.subgraphs().iter().zip(to.subgraphs()) {
-            let mut subgraph_mapping = Self::new_single(
-                from, to,
-                &ext_momenta
-            )?;
-            res.0.append(&mut subgraph_mapping.0);
-        }
-        Ok(res)
-    }
-
-    pub(crate) fn new_single(
-        from: &CanonGraph<Momentum, EdgeWeight, Undirected>,
-        to: &CanonGraph<Momentum, EdgeWeight, Undirected>,
-        ext_momenta: &[Symbol],
-    ) -> Result<Self, MappingError> {
-        debug_assert!(ext_momenta.windows(2).all(|q| q[0] < q[1]));
-
-        debug!("Mapping {} onto {}", from.format(), to.format());
-        if !shift_needed(&from, &to) {
-            // TODO: code duplication with Self::identity
-            let map = extract_momenta(from)
-                .into_iter()
-                .filter_map(|p| if ext_momenta.contains(&p) {
-                None
-            } else {
-                Some((p, p.into()))
-            });
-            return Ok(Self(map.collect()));
-        }
-        debug_assert_eq!(from.edge_count(), to.edge_count());
-        let mut from_loop_momenta = extract_momenta(from);
-        let mut to_loop_momenta = extract_momenta(to);
-        for q in ext_momenta {
+        let mut from_loop_momenta = extract_loop_momenta(from);
+        let mut to_loop_momenta = extract_loop_momenta(to);
+        for q in &ext_momenta {
             from_loop_momenta.swap_remove(q);
             to_loop_momenta.swap_remove(q);
         }
@@ -140,9 +104,9 @@ impl Mapping {
         );
 
         let mut shifts = Vec::new();
-        for (from, to) in
-            from.edge_references().zip(to.edge_references())
-        {
+        let from_edges = from.subgraphs().iter().flat_map(|g| g.edge_references());
+        let to_edges = to.subgraphs().iter().flat_map(|g| g.edge_references());
+        for (from, to) in from_edges.zip(to_edges) {
             debug_assert_eq!(from.source(), to.source());
             debug_assert_eq!(from.target(), to.target());
             debug_assert_eq!(from.weight().m, to.weight().m);
@@ -288,11 +252,11 @@ impl<'a> CoeffExtract<'a> {
 }
 
 fn shift_needed(
-    from: &UnGraph<Momentum, EdgeWeight>,
-    to: &UnGraph<Momentum, EdgeWeight>,
+    from: &TopologyWithExtMom,
+    to: &TopologyWithExtMom,
 ) -> bool {
-    from.edge_weights()
-        .zip(to.edge_weights())
+    from.subgraphs().iter().flat_map(|g| g.edge_weights())
+        .zip(to.subgraphs().iter().flat_map(|g| g.edge_weights()))
         .any(|(from, to)| from.p != to.p && from.p != -to.p.clone())
 }
 
@@ -330,8 +294,10 @@ impl<'a> Ord for Shift<'a> {
     }
 }
 
-fn extract_momenta(g: &UnGraph<Momentum, EdgeWeight>) -> IndexSet<Symbol> {
-    g.edge_weights()
+fn extract_loop_momenta(g: &TopologyWithExtMom) -> IndexSet<Symbol> {
+    g.subgraphs().iter()
+        .flat_map(|g| g.edge_weights())
         .flat_map(|e| e.p.terms().iter().map(|t| t.symbol()))
+        .filter(|s| !g.external_momenta.contains(s))
         .collect()
 }
