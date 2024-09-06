@@ -271,7 +271,7 @@ pub fn contains_cycle<N, E, Ix: IndexType>(g: &UnGraph<N, E, Ix>) -> bool {
             let removed = remaining_nodes.remove(&next);
             debug_assert!(removed);
             if let Some(adjacent) = adjacent_to.get(&next) {
-                edge_stack.extend(adjacent.iter().map(|t| (current, *t)));
+                edge_stack.extend(adjacent.iter().map(|t| (next, *t)));
             }
         }
     }
