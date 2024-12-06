@@ -5,14 +5,12 @@ use ahash::RandomState;
 use itertools::{izip, join, Itertools};
 use log::{debug, trace};
 use nalgebra::{DMatrix, Dim, Matrix, MatrixViewMut, RawStorage, U1};
-use num_traits::Zero;
 use petgraph::visit::EdgeRef;
 use thiserror::Error;
 
 use crate::graph_util::Format;
 use crate::mapper::TopologyWithExtMom;
-use crate::momentum::{Momentum, Term};
-use crate::symbol::Symbol;
+use crate::{Momentum, Symbol, Term};
 
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
 type IndexSet<T> = indexmap::IndexSet<T, RandomState>;
@@ -241,11 +239,11 @@ impl<'a> CoeffExtract<'a> {
         R: Dim,
     {
         for term in p.terms() {
-            if let Some(&col) = self.lpos.get(&term.symbol()) {
-                l[col] = term.coeff() as f64;
+            if let Some(&col) = self.lpos.get(&term.symbol) {
+                l[col] = term.coeff as f64;
             } else {
-                let col = *self.qpos.get(&term.symbol()).unwrap();
-                q[col] = term.coeff() as f64;
+                let col = *self.qpos.get(&term.symbol).unwrap();
+                q[col] = term.coeff as f64;
             };
         }
     }
@@ -297,7 +295,7 @@ impl<'a> Ord for Shift<'a> {
 fn extract_loop_momenta(g: &TopologyWithExtMom) -> IndexSet<Symbol> {
     g.subgraphs().iter()
         .flat_map(|g| g.edge_weights())
-        .flat_map(|e| e.p.terms().iter().map(|t| t.symbol()))
+        .flat_map(|e| e.p.terms().iter().map(|t| t.symbol))
         .filter(|s| !g.external_momenta.contains(s))
         .collect()
 }

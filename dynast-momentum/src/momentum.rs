@@ -8,39 +8,18 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use crate::symbol::Symbol;
 
-use ahash::AHashMap;
-use indexmap::IndexMap;
-use num_traits::Zero;
-use serde::{Deserialize, Deserializer, Serialize};
-
-#[derive(
-    Debug,
-    Copy,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Deserialize,
-    Serialize,
-)]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Term {
-    pub(crate) symbol: Symbol,
-    pub(crate) coeff: i32,
+    /// Momentum symbol
+    pub symbol: Symbol,
+    /// Numeric prefactor
+    pub coeff: i32,
 }
 
 impl Term {
     pub fn new(coeff: i32, symbol: Symbol) -> Term {
         Term { symbol, coeff }
-    }
-
-    pub fn symbol(&self) -> Symbol {
-        self.symbol
-    }
-
-    pub fn coeff(&self) -> i32 {
-        self.coeff
     }
 }
 
@@ -93,30 +72,38 @@ impl Display for Term {
     }
 }
 
-#[derive(
-    Debug,
-    Default,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Deserialize,
-    Serialize,
-)]
-#[serde(transparent)]
+/// A four-momentum, represented
+#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", serde(transparent))]
 pub struct Momentum {
-    #[serde(deserialize_with = "deserialize_terms")]
+    #[cfg_attr(
+        feature = "serde-1",
+        serde(deserialize_with = "deserialize_terms")
+    )]
     terms: Vec<Term>,
 }
 
-fn deserialize_terms<'de, D: Deserializer<'de>>(
+#[cfg(feature = "serde-1")]
+fn deserialize_terms<'de, D: serde::Deserializer<'de>>(
     d: D,
 ) -> Result<Vec<Term>, D::Error> {
+    use serde::Deserialize;
     let mut terms = <Vec<Term>>::deserialize(d)?;
-    terms.sort_unstable();
+    canonise_terms(&mut terms);
     Ok(terms)
+}
+
+fn canonise_terms(terms: &mut Vec<Term>) {
+    terms.sort_unstable();
+    for mut j in 1..terms.len() {
+        let i = j - 1;
+        while j < terms.len() && terms[i].symbol == terms[j].symbol {
+            terms[i].coeff += std::mem::replace(&mut terms[j].coeff, 0);
+            j += 1;
+        }
+    }
+    terms.retain(|t| t.coeff != 0);
 }
 
 impl Momentum {
@@ -124,19 +111,22 @@ impl Momentum {
     ///
     /// # Safety
     ///
-    /// The terms should be sorted and no two terms should have the
-    /// same symbol.
+    /// * The terms should be sorted
+    /// * No two terms should have the same symbol.
+    /// * All coefficients should be non-zero.
     pub unsafe fn from_terms_unchecked(terms: Vec<Term>) -> Self {
-        // TODO: assert!(terms.is_sorted()), no duplicate symbols
+        debug_assert!(terms.windows(2).all(|t| t[0].symbol < t[1].symbol));
+        debug_assert!(terms.iter().all(|t| t.coeff != 0));
+        Self { terms }
+    }
+
+    pub fn from_terms(mut terms: Vec<Term>) -> Self {
+        canonise_terms(&mut terms);
         Self { terms }
     }
 
     pub fn terms(&self) -> &[Term] {
         &self.terms
-    }
-
-    pub fn terms_mut(&mut self) -> &mut [Term] {
-        &mut self.terms
     }
 
     pub fn into_terms(self) -> Vec<Term> {
@@ -153,6 +143,62 @@ impl Momentum {
 
     pub fn is_empty(&self) -> bool {
         self.terms.is_empty()
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.is_empty()
+    }
+
+    pub fn retain<F>(&mut self, f: F)
+    where
+        for<'a> F: FnMut(&'a Term) -> bool,
+    {
+        self.terms.retain(f)
+    }
+
+    pub fn zero() -> Self {
+        Self { terms: vec![] }
+    }
+
+    fn add_assign_iter<T>(&mut self, iter: T)
+    where
+        T: IntoIterator<Item = Term>,
+    {
+        let mut res = Vec::new();
+        let mut it1 = self.terms.iter();
+        let mut it2 = iter.into_iter();
+        let mut t1 = it1.next();
+        let mut t2 = it2.next();
+        while let (Some(tt1), Some(tt2)) = (t1, t2) {
+            match tt1.symbol.cmp(&tt2.symbol) {
+                Ordering::Less => {
+                    res.push(*tt1);
+                    t1 = it1.next();
+                }
+                Ordering::Greater => {
+                    res.push(tt2);
+                    t2 = it2.next();
+                }
+                Ordering::Equal => {
+                    let coeff = tt1.coeff + tt2.coeff;
+                    if coeff != 0 {
+                        let symbol = tt1.symbol;
+                        res.push(Term { coeff, symbol });
+                    }
+                    t1 = it1.next();
+                    t2 = it2.next();
+                }
+            }
+        }
+        if let Some(t1) = t1 {
+            res.push(*t1);
+        }
+        if let Some(t2) = t2 {
+            res.push(t2);
+        }
+        res.extend(it1);
+        res.extend(it2);
+        self.terms = res;
     }
 }
 
@@ -248,7 +294,7 @@ impl Add<Momentum> for &Momentum {
     }
 }
 
-impl<'a, 'b> Add<&'a Momentum> for &'b Momentum {
+impl<'a> Add<&'a Momentum> for &'_ Momentum {
     type Output = Momentum;
 
     fn add(self, other: &'a Momentum) -> Self::Output {
@@ -285,7 +331,7 @@ impl Sub<Momentum> for &Momentum {
     }
 }
 
-impl<'a, 'b> Sub<&'a Momentum> for &'b Momentum {
+impl<'a> Sub<&'a Momentum> for &'_ Momentum {
     type Output = Momentum;
 
     fn sub(self, other: &'a Momentum) -> Self::Output {
@@ -297,41 +343,7 @@ impl<'a, 'b> Sub<&'a Momentum> for &'b Momentum {
 
 impl AddAssign<&Momentum> for Momentum {
     fn add_assign(&mut self, other: &Momentum) {
-        let mut res = Vec::new();
-        let mut it1 = self.terms.iter();
-        let mut it2 = other.terms.iter();
-        let mut t1 = it1.next();
-        let mut t2 = it2.next();
-        while let (Some(tt1), Some(tt2)) = (t1, t2) {
-            match tt1.symbol.cmp(&tt2.symbol) {
-                Ordering::Less => {
-                    res.push(*tt1);
-                    t1 = it1.next();
-                }
-                Ordering::Greater => {
-                    res.push(*tt2);
-                    t2 = it2.next();
-                }
-                Ordering::Equal => {
-                    let coeff = tt1.coeff + tt2.coeff;
-                    if coeff != 0 {
-                        let symbol = tt1.symbol;
-                        res.push(Term { coeff, symbol });
-                    }
-                    t1 = it1.next();
-                    t2 = it2.next();
-                }
-            }
-        }
-        if let Some(t1) = t1 {
-            res.push(*t1);
-        }
-        if let Some(t2) = t2 {
-            res.push(*t2);
-        }
-        res.extend(it1);
-        res.extend(it2);
-        self.terms = res;
+        self.add_assign_iter(other.terms.iter().copied());
     }
 }
 
@@ -357,44 +369,9 @@ impl AddAssign<Term> for Momentum {
     }
 }
 
-// TODO: code duplication with `add_assign`
 impl SubAssign<&Momentum> for Momentum {
     fn sub_assign(&mut self, other: &Momentum) {
-        let mut res = Vec::new();
-        let mut it1 = self.terms.iter();
-        let mut it2 = other.terms.iter().map(|t| -*t);
-        let mut t1 = it1.next();
-        let mut t2 = it2.next();
-        while let (Some(tt1), Some(tt2)) = (t1, t2) {
-            match tt1.symbol.cmp(&tt2.symbol) {
-                Ordering::Less => {
-                    res.push(*tt1);
-                    t1 = it1.next();
-                }
-                Ordering::Greater => {
-                    res.push(tt2);
-                    t2 = it2.next();
-                }
-                Ordering::Equal => {
-                    let coeff = tt1.coeff + tt2.coeff;
-                    if coeff != 0 {
-                        let symbol = tt1.symbol;
-                        res.push(Term { coeff, symbol });
-                    }
-                    t1 = it1.next();
-                    t2 = it2.next();
-                }
-            }
-        }
-        if let Some(t1) = t1 {
-            res.push(*t1);
-        }
-        if let Some(t2) = t2 {
-            res.push(t2);
-        }
-        res.extend(it1);
-        res.extend(it2);
-        self.terms = res;
+        self.add_assign_iter(other.terms.iter().map(|t| -*t));
     }
 }
 
@@ -465,7 +442,8 @@ impl Mul<&Momentum> for i32 {
     }
 }
 
-impl Zero for Momentum {
+#[cfg(feature = "num-traits")]
+impl num_traits::Zero for Momentum {
     fn zero() -> Self {
         Momentum { terms: vec![] }
     }
@@ -497,92 +475,11 @@ pub trait Replace<M> {
     fn replace(self, map: M) -> Self::Output;
 }
 
-impl<'a, S: BuildHasher> Replace<&'a AHashMap<Symbol, Momentum, S>> for Symbol {
-    type Output = Momentum;
-
-    fn replace(self, map: &'a AHashMap<Symbol, Momentum, S>) -> Self::Output {
-        map.get(&self).cloned().unwrap_or(Momentum::from(self))
-    }
-}
-
 impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Momentum, S>> for Symbol {
     type Output = Momentum;
 
     fn replace(self, map: &'a HashMap<Symbol, Momentum, S>) -> Self::Output {
         map.get(&self).cloned().unwrap_or(Momentum::from(self))
-    }
-}
-
-impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Momentum, S>> for Symbol {
-    type Output = Momentum;
-
-    fn replace(self, map: &'a IndexMap<Symbol, Momentum, S>) -> Self::Output {
-        map.get(&self).cloned().unwrap_or(Momentum::from(self))
-    }
-}
-
-impl<'a, S: BuildHasher> Replace<&'a AHashMap<Symbol, Momentum, S>> for Term {
-    type Output = Momentum;
-
-    fn replace(self, map: &'a AHashMap<Symbol, Momentum, S>) -> Self::Output {
-        let Term { symbol, coeff } = self;
-        coeff * symbol.replace(map)
-    }
-}
-
-impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Momentum, S>> for Term {
-    type Output = Momentum;
-
-    fn replace(self, map: &'a HashMap<Symbol, Momentum, S>) -> Self::Output {
-        let Term { symbol, coeff } = self;
-        coeff * symbol.replace(map)
-    }
-}
-
-impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Momentum, S>> for Term {
-    type Output = Momentum;
-
-    fn replace(self, map: &'a IndexMap<Symbol, Momentum, S>) -> Self::Output {
-        let Term { symbol, coeff } = self;
-        coeff * symbol.replace(map)
-    }
-}
-
-impl<'a, S: BuildHasher> Replace<&'a AHashMap<Symbol, Momentum, S>>
-    for Momentum
-{
-    type Output = Momentum;
-
-    fn replace(self, map: &'a AHashMap<Symbol, Momentum, S>) -> Self::Output {
-        self.into_terms().into_iter().map(|t| t.replace(map)).sum()
-    }
-}
-
-impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Momentum, S>>
-    for Momentum
-{
-    type Output = Momentum;
-
-    fn replace(self, map: &'a HashMap<Symbol, Momentum, S>) -> Self::Output {
-        self.into_terms().into_iter().map(|t| t.replace(map)).sum()
-    }
-}
-
-impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Momentum, S>>
-    for Momentum
-{
-    type Output = Momentum;
-
-    fn replace(self, map: &'a IndexMap<Symbol, Momentum, S>) -> Self::Output {
-        self.into_terms().into_iter().map(|t| t.replace(map)).sum()
-    }
-}
-
-impl<'a, S: BuildHasher> Replace<&'a AHashMap<Symbol, Symbol, S>> for Symbol {
-    type Output = Symbol;
-
-    fn replace(self, map: &'a AHashMap<Symbol, Symbol, S>) -> Self::Output {
-        map.get(&self).copied().unwrap_or(self)
     }
 }
 
@@ -594,49 +491,12 @@ impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Symbol, S>> for Symbol {
     }
 }
 
-impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Symbol, S>> for Symbol {
-    type Output = Symbol;
-
-    fn replace(self, map: &'a IndexMap<Symbol, Symbol, S>) -> Self::Output {
-        map.get(&self).copied().unwrap_or(self)
-    }
-}
-
-impl<'a, S: BuildHasher> Replace<&'a AHashMap<Symbol, Symbol, S>> for Term {
-    type Output = Term;
-
-    fn replace(mut self, map: &'a AHashMap<Symbol, Symbol, S>) -> Self::Output {
-        self.symbol = self.symbol.replace(map);
-        self
-    }
-}
-
 impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Symbol, S>> for Term {
     type Output = Term;
 
     fn replace(mut self, map: &'a HashMap<Symbol, Symbol, S>) -> Self::Output {
         self.symbol = self.symbol.replace(map);
         self
-    }
-}
-
-impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Symbol, S>> for Term {
-    type Output = Term;
-
-    fn replace(mut self, map: &'a IndexMap<Symbol, Symbol, S>) -> Self::Output {
-        self.symbol = self.symbol.replace(map);
-        self
-    }
-}
-
-impl<'a, S: BuildHasher> Replace<&'a AHashMap<Symbol, Symbol, S>> for Momentum {
-    type Output = Momentum;
-
-    fn replace(self, map: &'a AHashMap<Symbol, Symbol, S>) -> Self::Output {
-        self.into_terms()
-            .into_iter()
-            .map(|t| t.replace(map))
-            .collect()
     }
 }
 
@@ -651,14 +511,22 @@ impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Symbol, S>> for Momentum {
     }
 }
 
-impl<'a, S: BuildHasher> Replace<&'a IndexMap<Symbol, Symbol, S>> for Momentum {
+impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Momentum, S>> for Term {
     type Output = Momentum;
 
-    fn replace(self, map: &'a IndexMap<Symbol, Symbol, S>) -> Self::Output {
-        self.into_terms()
-            .into_iter()
-            .map(|t| t.replace(map))
-            .collect()
+    fn replace(self, map: &'a HashMap<Symbol, Momentum, S>) -> Self::Output {
+        let Term { symbol, coeff } = self;
+        coeff * symbol.replace(map)
+    }
+}
+
+impl<'a, S: BuildHasher> Replace<&'a HashMap<Symbol, Momentum, S>>
+    for Momentum
+{
+    type Output = Momentum;
+
+    fn replace(self, map: &'a HashMap<Symbol, Momentum, S>) -> Self::Output {
+        self.into_terms().into_iter().map(|t| t.replace(map)).sum()
     }
 }
 
@@ -667,7 +535,7 @@ impl Replace<(Symbol, Momentum)> for Momentum {
 
     fn replace(mut self, repl: (Symbol, Momentum)) -> Self::Output {
         let (lhs, mut rhs) = repl;
-        let pos = self.terms().binary_search_by_key(&lhs, |t| t.symbol());
+        let pos = self.terms().binary_search_by_key(&lhs, |t| t.symbol);
         if let Ok(pos) = pos {
             let coeff = self.terms.remove(pos).coeff;
             // TODO: use fused multiply add?
@@ -683,7 +551,7 @@ impl Replace<(Symbol, Symbol)> for Momentum {
 
     fn replace(mut self, repl: (Symbol, Symbol)) -> Self::Output {
         let (lhs, rhs) = repl;
-        let pos = self.terms().binary_search_by_key(&lhs, |t| t.symbol());
+        let pos = self.terms().binary_search_by_key(&lhs, |t| t.symbol);
         if let Ok(pos) = pos {
             let mut t = self.terms.remove(pos);
             t.symbol = rhs;

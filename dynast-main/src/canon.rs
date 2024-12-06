@@ -1,4 +1,5 @@
 use derivative::Derivative;
+use crate::Momentum;
 use log::trace;
 use nauty_pet::prelude::*;
 use petgraph::{graph::UnGraph, Undirected};
@@ -7,7 +8,6 @@ use crate::graph_util::{
     from_nodes_edges, into_nodes_edges, transform_nodes,
     Format,
 };
-use crate::momentum::Momentum;
 use crate::yaml_dias::EdgeWeight;
 
 // Similar to nauty_pet's canonisation, but keep track of momentum directions

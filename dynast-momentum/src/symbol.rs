@@ -1,21 +1,8 @@
 use std::fmt::{self, Display};
 
-use serde::{Deserialize, Serialize};
-
-#[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Hash,
-    Deserialize,
-    Serialize,
-)]
-#[serde(transparent)]
+#[cfg_attr(feature = "serde-1", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-1", serde(transparent))]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Symbol(math_symbols::Symbol);
 
 impl Symbol {
@@ -38,7 +25,7 @@ impl Display for Symbol {
 macro_rules! symbols {
     ( $( $x:ident ),* ) => {
         $(
-            let $x = Symbol::new(stringify!($x));
+            let $x = $crate::symbol::Symbol::new(stringify!($x));
         )*
     };
 }

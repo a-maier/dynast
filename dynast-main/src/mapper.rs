@@ -5,18 +5,16 @@ use std::hash::Hash;
 
 use ahash::RandomState;
 use biconnected_components::SplitIntoBcc;
+use crate::{Momentum, Symbol};
 use itertools::Itertools;
 use log::{debug, trace};
 use nauty_pet::prelude::*;
-use num_traits::Zero;
 use petgraph::{graph::UnGraph, visit::EdgeRef, Graph, Undirected};
 use thiserror::Error;
 
 use crate::canon::into_canon;
 use crate::graph_util::{contains_cycle, contract_duplicate, contract_graph_edge, Format};
-use crate::momentum::Momentum;
 use crate::momentum_mapping::{Mapping, MappingError};
-use crate::symbol::Symbol;
 use crate::yaml_dias::{Diagram, EdgeWeight, ImportError};
 
 type IndexMap<K, V> = indexmap::IndexMap<K, V, RandomState>;
@@ -301,7 +299,7 @@ pub fn extract_external_momenta<E>(
     let mut res = IndexSet::default();
     for p in g.node_weights() {
         for term in p.terms() {
-            res.insert(term.symbol());
+            res.insert(term.symbol);
         }
     }
     res

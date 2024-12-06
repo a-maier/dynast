@@ -5,7 +5,7 @@ use std::fmt::{self, Display};
 use std::ops::AddAssign;
 
 use ahash::{AHashSet, AHashMap};
-use num_traits::Zero;
+use crate::Momentum;
 use petgraph::prelude::NodeIndex;
 use petgraph::{
     graph::{IndexType, UnGraph},
@@ -13,7 +13,6 @@ use petgraph::{
     EdgeType, Graph,
 };
 
-use crate::momentum::Momentum;
 use crate::yaml_dias::EdgeWeight;
 
 pub trait Format<'a> {
@@ -210,7 +209,7 @@ fn minmax<T: Ord>(s: T, t: T) -> (T, T) {
 
 fn norm_sign(p: &Momentum) -> Cow<'_, Momentum> {
     match p.terms().first() {
-        Some(t) if t.coeff() < 0 => Cow::Owned(-p.clone()),
+        Some(t) if t.coeff < 0 => Cow::Owned(-p.clone()),
         _ => Cow::Borrowed(p),
     }
 }

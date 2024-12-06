@@ -4,6 +4,7 @@ use std::fmt::{self, Display};
 use std::iter::once;
 
 use derivative::Derivative;
+use crate::{Momentum, Symbol, Term};
 use nom::{
     character::complete::{
         alpha1, alphanumeric0, char, digit1, multispace0, one_of,
@@ -13,14 +14,11 @@ use nom::{
     sequence::{pair, preceded, separated_pair, terminated, tuple},
     IResult,
 };
-use num_traits::Zero;
 use petgraph::graph::UnGraph;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::graph_util::Format;
-use crate::momentum::{Momentum, Term};
-use crate::symbol::Symbol;
 
 #[derive(
     Clone,
@@ -303,8 +301,9 @@ impl<'a> Display for FormatDia<'a> {
 
 #[cfg(test)]
 mod tests {
+    use dynast_momentum::symbols;
+
     use super::*;
-    use crate::symbols;
 
     #[test]
     fn parse_var() {

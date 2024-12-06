@@ -4,9 +4,9 @@ use ahash::AHashMap;
 use anyhow::Result;
 use clap::Parser;
 
-use crate::symbol::Symbol;
+use crate::Symbol;
 use crate::writer::OutFormat;
-use crate::{momentum::Momentum, yaml_dias::NumOrString};
+use crate::{Momentum, yaml_dias::NumOrString};
 
 /// Map diagrams onto topologies
 #[derive(Parser, Debug)]

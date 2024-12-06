@@ -135,10 +135,8 @@ mod dia_file_iter;
 mod form_input;
 mod graph_util;
 mod mapper;
-mod momentum;
 mod momentum_mapping;
 mod opt;
-mod symbol;
 mod version;
 mod writer;
 mod yaml_dias;
@@ -149,6 +147,7 @@ use std::io::{BufWriter, Write};
 
 use ahash::AHashMap;
 use anyhow::{Context, Result};
+use dynast::{Momentum, Replace, Symbol, Term};
 use env_logger::Env;
 
 use log::{debug, info, trace};
@@ -157,9 +156,7 @@ use petgraph::{graph::UnGraph, Graph};
 use crate::dia_file_iter::DiaFileIter;
 use crate::graph_util::Format;
 use crate::mapper::{into_factors, TopMapper};
-use crate::momentum::{Momentum, Replace};
 use crate::opt::Args;
-use crate::symbol::Symbol;
 use crate::version::VERSION_STRING;
 use crate::writer::{write, write_factorising, write_header};
 use crate::yaml_dias::{Diagram, EdgeWeight, NumOrString};
