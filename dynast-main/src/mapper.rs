@@ -43,7 +43,7 @@ impl From<UnGraph<Momentum, EdgeWeight>> for Topology {
     fn from(graph: UnGraph<Momentum, EdgeWeight>) -> Self {
         // TODO: ensure momentum conservation
         let mut subgraphs = into_factors(graph);
-        subgraphs.retain(|g| contains_cycle(g));
+        subgraphs.retain(contains_cycle);
 
         let mut canon = Vec::from_iter(
             subgraphs

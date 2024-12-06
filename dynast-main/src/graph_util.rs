@@ -31,7 +31,7 @@ impl<'a> Format<'a> for UnGraph<Momentum, EdgeWeight> {
 
 pub struct FormatUnGraph<'a>(&'a UnGraph<Momentum, EdgeWeight>);
 
-impl<'a> Display for FormatUnGraph<'a> {
+impl Display for FormatUnGraph<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,

@@ -68,7 +68,7 @@ impl Mapping {
             from.subgraphs().iter().zip(to.subgraphs())
                 .all(|(from, to)| from.edge_count() == to.edge_count())
         );
-        if !shift_needed(&from, &to) {
+        if !shift_needed(from, to) {
             return Ok(Self::identity(from));
         }
         let mut ext_momenta = Vec::from_iter(
@@ -228,7 +228,7 @@ struct CoeffExtract<'a> {
     qpos: &'a IndexMap<Symbol, usize>,
 }
 
-impl<'a> CoeffExtract<'a> {
+impl CoeffExtract<'_> {
     fn extract_into<C, R>(
         &self,
         p: &Momentum,
@@ -270,19 +270,19 @@ impl<'a> Shift<'a> {
     }
 }
 
-impl<'a> std::fmt::Display for Shift<'a> {
+impl std::fmt::Display for Shift<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{} -> {}", self.lhs, self.rhs)
     }
 }
 
-impl<'a> PartialOrd for Shift<'a> {
+impl PartialOrd for Shift<'_> {
     fn partial_cmp(&self, other: &Shift) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<'a> Ord for Shift<'a> {
+impl Ord for Shift<'_> {
     fn cmp(&self, other: &Shift) -> Ordering {
         (self.lhs.terms().len(), &self.lhs, &self.rhs).cmp(&(
             other.lhs.terms().len(),

@@ -279,7 +279,7 @@ impl<'a> Format<'a> for Diagram {
 
 pub struct FormatDia<'a>(&'a Diagram);
 
-impl<'a> Display for FormatDia<'a> {
+impl Display for FormatDia<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Denom::*;
         writeln!(
