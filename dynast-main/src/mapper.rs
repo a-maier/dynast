@@ -3,9 +3,9 @@ use std::convert::TryFrom;
 use std::fmt::Display;
 use std::hash::Hash;
 
+use crate::{Momentum, Symbol};
 use ahash::RandomState;
 use biconnected_components::SplitIntoBcc;
-use crate::{Momentum, Symbol};
 use itertools::Itertools;
 use log::{debug, trace};
 use nauty_pet::prelude::*;
@@ -13,7 +13,9 @@ use petgraph::{graph::UnGraph, visit::EdgeRef, Graph, Undirected};
 use thiserror::Error;
 
 use crate::canon::into_canon;
-use crate::graph_util::{contains_cycle, contract_duplicate, contract_graph_edge, Format};
+use crate::graph_util::{
+    contains_cycle, contract_duplicate, contract_graph_edge, Format,
+};
 use crate::momentum_mapping::{Mapping, MappingError};
 use crate::yaml_dias::{Diagram, EdgeWeight, ImportError};
 
@@ -28,7 +30,9 @@ impl Topology {
         &self.0
     }
 
-    pub fn into_subgraphs(self) -> Vec<CanonGraph<Momentum, EdgeWeight, Undirected>> {
+    pub fn into_subgraphs(
+        self,
+    ) -> Vec<CanonGraph<Momentum, EdgeWeight, Undirected>> {
         self.0
     }
 
@@ -57,7 +61,7 @@ impl From<UnGraph<Momentum, EdgeWeight>> for Topology {
                         reversed
                     }
                 })
-                .inspect(|g| trace!("Canonical form of graph: {}", g.format()))
+                .inspect(|g| trace!("Canonical form of graph: {}", g.format())),
         );
         canon.sort();
         Self(canon)
@@ -211,7 +215,10 @@ impl<ID: Clone + Display> TopMapper<ID> {
             contract_duplicate(graph)
         };
         let top = Topology::from(graph);
-        let top = TopologyWithExtMom{ external_momenta, top };
+        let top = TopologyWithExtMom {
+            external_momenta,
+            top,
+        };
         if let Some((target, topname)) = self.seen.get_key_value(&top) {
             debug!("graph is {topname}");
             let map = Mapping::new(&top, target)?;
@@ -222,12 +229,13 @@ impl<ID: Clone + Display> TopMapper<ID> {
     }
 
     fn insert_subgraphs(&mut self, top: TopologyWithExtMom, name: ID) {
-        trace!("Inserting {}", top.subgraphs().iter().map(|g| g.format()).join("\n"));
+        trace!(
+            "Inserting {}",
+            top.subgraphs().iter().map(|g| g.format()).join("\n")
+        );
         for (nsub, sub) in top.subgraphs().iter().enumerate() {
-            let contractible_edges = sub
-                .edge_references()
-                .enumerate()
-                .filter_map(|(e, edge)| {
+            let contractible_edges =
+                sub.edge_references().enumerate().filter_map(|(e, edge)| {
                     if edge.source() != edge.target() {
                         Some(e)
                     } else {
@@ -241,9 +249,15 @@ impl<ID: Clone + Display> TopMapper<ID> {
                 //       contraction can create a new articulation
                 //       vertex
                 let subtop = Topology::from(subgraph);
-                let TopologyWithExtMom { external_momenta, mut top } = top.clone();
+                let TopologyWithExtMom {
+                    external_momenta,
+                    mut top,
+                } = top.clone();
                 top.replace_subgraph(nsub, subtop);
-                let top = TopologyWithExtMom{ external_momenta, top };
+                let top = TopologyWithExtMom {
+                    external_momenta,
+                    top,
+                };
                 if !self.seen.contains_key(&top) {
                     self.insert_subgraphs(top, name.clone())
                 }
@@ -254,7 +268,7 @@ impl<ID: Clone + Display> TopMapper<ID> {
 }
 
 fn reverse_external_momenta(
-    mut graph: UnGraph<Momentum, EdgeWeight>
+    mut graph: UnGraph<Momentum, EdgeWeight>,
 ) -> UnGraph<Momentum, EdgeWeight> {
     for p in graph.node_weights_mut() {
         *p = -std::mem::take(p);

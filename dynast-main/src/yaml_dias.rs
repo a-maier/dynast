@@ -3,8 +3,8 @@ use std::convert::TryFrom;
 use std::fmt::{self, Display};
 use std::iter::once;
 
-use derivative::Derivative;
 use crate::{Momentum, Symbol, Term};
+use derivative::Derivative;
 use nom::{
     character::complete::{
         alpha1, alphanumeric0, char, digit1, multispace0, one_of,

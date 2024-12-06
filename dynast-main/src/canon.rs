@@ -1,12 +1,11 @@
-use derivative::Derivative;
 use crate::Momentum;
+use derivative::Derivative;
 use log::trace;
 use nauty_pet::prelude::*;
 use petgraph::{graph::UnGraph, Undirected};
 
 use crate::graph_util::{
-    from_nodes_edges, into_nodes_edges, transform_nodes,
-    Format,
+    from_nodes_edges, into_nodes_edges, transform_nodes, Format,
 };
 use crate::yaml_dias::EdgeWeight;
 

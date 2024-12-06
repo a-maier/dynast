@@ -4,8 +4,8 @@ use std::convert::identity;
 use std::fmt::{self, Display};
 use std::ops::AddAssign;
 
-use ahash::{AHashSet, AHashMap};
 use crate::Momentum;
+use ahash::{AHashMap, AHashSet};
 use petgraph::prelude::NodeIndex;
 use petgraph::{
     graph::{IndexType, UnGraph},
@@ -223,12 +223,8 @@ pub fn contains_cycle<N, E, Ix: IndexType>(g: &UnGraph<N, E, Ix>) -> bool {
         source: NodeIndex<Ix>,
         target: NodeIndex<Ix>,
     ) -> bool {
-        adjacent_to.entry(source)
-            .or_default()
-            .insert(target)
-            && adjacent_to.entry(target)
-            .or_default()
-            .insert(source)
+        adjacent_to.entry(source).or_default().insert(target)
+            && adjacent_to.entry(target).or_default().insert(source)
     }
 
     fn remove_edge<Ix: IndexType>(
@@ -298,7 +294,8 @@ mod tests {
         let g = UnGraph::<(), i32>::from_edges(&[(0, 1), (2, 3)]);
         assert!(!contains_cycle(&g));
 
-        let g = UnGraph::<(), i32>::from_edges(&[(0, 1), (2, 3), (3, 4), (4, 2)]);
+        let g =
+            UnGraph::<(), i32>::from_edges(&[(0, 1), (2, 3), (3, 4), (4, 2)]);
         assert!(contains_cycle(&g));
     }
 }

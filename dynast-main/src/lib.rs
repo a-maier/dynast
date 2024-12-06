@@ -6,4 +6,4 @@ pub mod yaml_doc_iter;
 
 mod canon;
 
-pub use dynast_momentum::{momentum::Replace, Momentum, Term, Symbol};
+pub use dynast_momentum::{momentum::Replace, Momentum, Symbol, Term};

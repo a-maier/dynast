@@ -30,7 +30,7 @@ impl Display for Mapping {
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum MappingError {
-    MomentumMismatch(Box<(IndexSet<Symbol>, IndexSet<Symbol>)>)
+    MomentumMismatch(Box<(IndexSet<Symbol>, IndexSet<Symbol>)>),
 }
 
 impl Display for MappingError {
@@ -41,16 +41,14 @@ impl Display for MappingError {
                 "Sets of loop momenta differ: {{{}}} != {{{}}}",
                 join(&err.0, ", "),
                 join(&err.1, ", "),
-            )
+            ),
         }
     }
 }
 
 impl Mapping {
     pub(crate) fn identity(g: &TopologyWithExtMom) -> Self {
-        let map = extract_loop_momenta(g)
-            .into_iter()
-            .map(|p| (p, p.into()));
+        let map = extract_loop_momenta(g).into_iter().map(|p| (p, p.into()));
         Self(map.collect())
     }
 
@@ -64,10 +62,11 @@ impl Mapping {
             to.subgraphs().iter().map(|g| g.format()).join("\n")
         );
         debug_assert_eq!(from.subgraphs().len(), to.subgraphs().len());
-        debug_assert!(
-            from.subgraphs().iter().zip(to.subgraphs())
-                .all(|(from, to)| from.edge_count() == to.edge_count())
-        );
+        debug_assert!(from
+            .subgraphs()
+            .iter()
+            .zip(to.subgraphs())
+            .all(|(from, to)| from.edge_count() == to.edge_count()));
         if !shift_needed(from, to) {
             return Ok(Self::identity(from));
         }
@@ -102,7 +101,8 @@ impl Mapping {
         );
 
         let mut shifts = Vec::new();
-        let from_edges = from.subgraphs().iter().flat_map(|g| g.edge_references());
+        let from_edges =
+            from.subgraphs().iter().flat_map(|g| g.edge_references());
         let to_edges = to.subgraphs().iter().flat_map(|g| g.edge_references());
         for (from, to) in from_edges.zip(to_edges) {
             debug_assert_eq!(from.source(), to.source());
@@ -249,11 +249,10 @@ impl CoeffExtract<'_> {
     }
 }
 
-fn shift_needed(
-    from: &TopologyWithExtMom,
-    to: &TopologyWithExtMom,
-) -> bool {
-    from.subgraphs().iter().flat_map(|g| g.edge_weights())
+fn shift_needed(from: &TopologyWithExtMom, to: &TopologyWithExtMom) -> bool {
+    from.subgraphs()
+        .iter()
+        .flat_map(|g| g.edge_weights())
         .zip(to.subgraphs().iter().flat_map(|g| g.edge_weights()))
         .any(|(from, to)| from.p != to.p && from.p != -to.p.clone())
 }
@@ -293,7 +292,8 @@ impl Ord for Shift<'_> {
 }
 
 fn extract_loop_momenta(g: &TopologyWithExtMom) -> IndexSet<Symbol> {
-    g.subgraphs().iter()
+    g.subgraphs()
+        .iter()
         .flat_map(|g| g.edge_weights())
         .flat_map(|e| e.p.terms().iter().map(|t| t.symbol))
         .filter(|s| !g.external_momenta.contains(s))
