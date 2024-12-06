@@ -25,7 +25,6 @@ log = "0.4"
 nalgebra = "0.33"
 nauty-pet = { version = "0.12", features = ["stable"] }
 nom = "7"
-num-traits = "0.2"
 petgraph = "0.6"
 regex = "1.7"
 serde = { version = "1.0", features = ["derive"] }
