@@ -11,9 +11,9 @@ repository = "https://github.com/a-maier/dynast"
 
 [dependencies]
 ahash = { version = "0.8", optional = true }
-indexmap = { version = "2.7.0", optional = true }
+indexmap = { version = "2.7", optional = true }
 math-symbols = "0.1"
-num-traits = { version = "0.2.19", optional = true }
+num-traits = { version = "0.2", optional = true }
 serde = { version = "1.0", optional = true }
 
 [features]
